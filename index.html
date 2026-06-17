@@ -23,51 +23,32 @@
       zoom: 10
     });
 
-    const cityCoords = {
-      'Dallas': [-96.7970, 32.7767],
-      'Plano': [-96.6989, 33.0198],
-      'Frisco': [-96.8236, 33.1507],
-      'McKinney': [-96.6397, 33.1972],
-      'Allen': [-96.6705, 33.1032],
-      'Richardson': [-96.7299, 32.9482],
-      'Irving': [-96.9489, 32.8140],
-      'Garland': [-96.6389, 32.9126]
-    };
-
-    function getCoords(locationString) {
-      for (const [city, coords] of Object.entries(cityCoords)) {
-        if (locationString.includes(city)) return coords;
-      }
-      return [-96.7970, 32.7767];
-    }
-
     map.on('load', async () => {
+      const appId = 'b7919541';
+      const appKey = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
+
       const response = await fetch(
-        'https://data.usajobs.gov/api/search?LocationName=Dallas,Texas&ResultsPerPage=25',
-        {
-          headers: {
-            'Authorization-Key': 'OqqpmePnZJbPca30g9gSSQHCDbUTS5DatiFtX3wKMc0=',
-            'User-Agent': 'corey.spence.shs@gmail.com'
-          }
-        }
+        `https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${appId}&app_key=${appKey}&where=Dallas,TX&results_per_page=50&distance=25`
       );
 
       const data = await response.json();
-      const jobs = data.SearchResult.SearchResultItems;
+      const jobs = data.results;
 
       jobs.forEach(job => {
-        const title = job.MatchedObjectDescriptor.PositionTitle;
-        const org = job.MatchedObjectDescriptor.OrganizationName;
-        const url = job.MatchedObjectDescriptor.ApplyURI[0];
-        const location = job.MatchedObjectDescriptor.PositionLocationDisplay;
-        const coords = getCoords(location);
+        const title = job.title;
+        const company = job.company.display_name;
+        const url = job.redirect_url;
+        const lat = job.latitude;
+        const lng = job.longitude;
 
-        new mapboxgl.Marker({ color: '#00ff88' })
-          .setLngLat(coords)
-          .setPopup(new mapboxgl.Popup().setHTML(
-            `<strong>${title}</strong><br>${org}<br>${location}<br><a href="${url}" target="_blank">Apply</a>`
-          ))
-          .addTo(map);
+        if (lat && lng) {
+          new mapboxgl.Marker({ color: '#00ff88' })
+            .setLngLat([lng, lat])
+            .setPopup(new mapboxgl.Popup().setHTML(
+              `<strong>${title}</strong><br>${company}<br><a href="${url}" target="_blank">Apply</a>`
+            ))
+            .addTo(map);
+        }
       });
     });
   </script>
