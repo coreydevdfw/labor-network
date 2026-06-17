@@ -23,6 +23,24 @@
       zoom: 10
     });
 
+    const cityCoords = {
+      'Dallas': [-96.7970, 32.7767],
+      'Plano': [-96.6989, 33.0198],
+      'Frisco': [-96.8236, 33.1507],
+      'McKinney': [-96.6397, 33.1972],
+      'Allen': [-96.6705, 33.1032],
+      'Richardson': [-96.7299, 32.9482],
+      'Irving': [-96.9489, 32.8140],
+      'Garland': [-96.6389, 32.9126]
+    };
+
+    function getCoords(locationString) {
+      for (const [city, coords] of Object.entries(cityCoords)) {
+        if (locationString.includes(city)) return coords;
+      }
+      return [-96.7970, 32.7767];
+    }
+
     map.on('load', async () => {
       const response = await fetch(
         'https://data.usajobs.gov/api/search?LocationName=Dallas,Texas&ResultsPerPage=25',
@@ -41,13 +59,13 @@
         const title = job.MatchedObjectDescriptor.PositionTitle;
         const org = job.MatchedObjectDescriptor.OrganizationName;
         const url = job.MatchedObjectDescriptor.ApplyURI[0];
-        const lat = parseFloat(job.MatchedObjectDescriptor.PositionLocationDisplay) || 33.0137;
-        const lng = -96.7970;
+        const location = job.MatchedObjectDescriptor.PositionLocationDisplay;
+        const coords = getCoords(location);
 
         new mapboxgl.Marker({ color: '#00ff88' })
-          .setLngLat([lng, lat])
+          .setLngLat(coords)
           .setPopup(new mapboxgl.Popup().setHTML(
-            `<strong>${title}</strong><br>${org}<br><a href="${url}" target="_blank">Apply</a>`
+            `<strong>${title}</strong><br>${org}<br>${location}<br><a href="${url}" target="_blank">Apply</a>`
           ))
           .addTo(map);
       });
