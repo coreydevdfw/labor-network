@@ -7,49 +7,354 @@
   <script src='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js'></script>
   <link href='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css' rel='stylesheet' />
   <style>
-    body { margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; background: #0a0a0a; }
     #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+    /* HUD overlay */
+    #hud {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(10,10,10,0.82);
+      border: 1px solid rgba(0,255,136,0.18);
+      border-radius: 12px;
+      padding: 10px 18px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    #hud .logo {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #00ff88;
+      white-space: nowrap;
+    }
+    #hud .divider {
+      width: 1px;
+      height: 18px;
+      background: rgba(255,255,255,0.12);
+    }
+    #hud .job-count {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      white-space: nowrap;
+    }
+    #hud .job-count span {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Radius label */
+    #radius-label {
+      position: absolute;
+      bottom: 36px;
+      left: 16px;
+      z-index: 10;
+      background: rgba(10,10,10,0.75);
+      border: 1px solid rgba(0,255,136,0.15);
+      border-radius: 8px;
+      padding: 7px 12px;
+      color: rgba(255,255,255,0.55);
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      backdrop-filter: blur(6px);
+    }
+    #radius-label span { color: #00ff88; font-weight: 600; }
+
+    /* Zoom hint */
+    #zoom-hint {
+      position: absolute;
+      bottom: 36px;
+      right: 16px;
+      z-index: 10;
+      background: rgba(10,10,10,0.75);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 7px 12px;
+      color: rgba(255,255,255,0.4);
+      font-size: 11px;
+      transition: opacity 0.4s;
+    }
+
+    /* Custom popup */
+    .mapboxgl-popup-content {
+      background: #111 !important;
+      border: 1px solid rgba(0,255,136,0.25) !important;
+      border-radius: 10px !important;
+      padding: 14px 16px !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+      min-width: 200px;
+    }
+    .mapboxgl-popup-tip { display: none !important; }
+    .mapboxgl-popup-close-button {
+      color: rgba(255,255,255,0.4) !important;
+      font-size: 16px !important;
+      top: 6px !important;
+      right: 8px !important;
+    }
+    .popup-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+      line-height: 1.3;
+      padding-right: 16px;
+    }
+    .popup-company {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 10px;
+    }
+    .popup-apply {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #0a0a0a;
+      background: #00ff88;
+      border-radius: 6px;
+      padding: 5px 12px;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      transition: opacity 0.2s;
+    }
+    .popup-apply:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
+
   <div id="map"></div>
+
+  <div id="hud">
+    <div class="logo">Labor Network</div>
+    <div class="divider"></div>
+    <div class="job-count">Loading jobs<span id="count-val"></span></div>
+  </div>
+
+  <div id="radius-label">Searching within <span id="radius-val">25 mi</span> of Dallas, TX</div>
+  <div id="zoom-hint">Zoom in to explore your neighborhood →</div>
+
   <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoiY29yZXlkZXZkZnciLCJhIjoiY21xaHVvanM2MDE3bDJ0cHB4NTF4andpdiJ9.7zXPq8gI54J5-OEEh69E5w';
+
+    const CENTER = [-96.7970, 33.0137];
+    const SEARCH_RADIUS_MI = 25;
 
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-96.7970, 33.0137],
-      zoom: 10
+      center: CENTER,
+      zoom: 10,
+      minZoom: 8,
+      maxZoom: 17
     });
 
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+
+    // --- Turf-free circle: generate a GeoJSON polygon approximating a radius circle ---
+    function makeCircleGeoJSON(center, radiusMiles, steps = 64) {
+      const coords = [];
+      const R = 3958.8; // Earth radius miles
+      const lat = center[1] * Math.PI / 180;
+      const lng = center[0] * Math.PI / 180;
+      for (let i = 0; i <= steps; i++) {
+        const angle = (i / steps) * 2 * Math.PI;
+        const dLat = (radiusMiles / R) * Math.cos(angle);
+        const dLng = (radiusMiles / R) * Math.sin(angle) / Math.cos(lat);
+        coords.push([
+          center[0] + dLng * 180 / Math.PI,
+          center[1] + dLat * 180 / Math.PI
+        ]);
+      }
+      return {
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [coords] }
+        }]
+      };
+    }
+
     map.on('load', async () => {
-      const appId = 'b7919541';
-      const appKey = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
 
-      const response = await fetch(
-        `https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${appId}&app_key=${appKey}&where=Dallas,TX&results_per_page=50&distance=25`
-      );
+      // ── Radius circle layers ──────────────────────────────────────────────
+      const circleGeoJSON = makeCircleGeoJSON(CENTER, SEARCH_RADIUS_MI);
 
-      const data = await response.json();
-      const jobs = data.results;
+      map.addSource('radius-circle', { type: 'geojson', data: circleGeoJSON });
 
-      jobs.forEach(job => {
-        const title = job.title;
-        const company = job.company.display_name;
-        const url = job.redirect_url;
-        const lat = job.latitude;
-        const lng = job.longitude;
-
-        if (lat && lng) {
-          new mapboxgl.Marker({ color: '#00ff88' })
-            .setLngLat([lng, lat])
-            .setPopup(new mapboxgl.Popup().setHTML(
-              `<strong>${title}</strong><br>${company}<br><a href="${url}" target="_blank">Apply</a>`
-            ))
-            .addTo(map);
+      // Soft filled area
+      map.addLayer({
+        id: 'radius-fill',
+        type: 'fill',
+        source: 'radius-circle',
+        paint: {
+          'fill-color': '#00ff88',
+          'fill-opacity': 0.03
         }
       });
+
+      // Glowing border
+      map.addLayer({
+        id: 'radius-outline',
+        type: 'line',
+        source: 'radius-circle',
+        paint: {
+          'line-color': '#00ff88',
+          'line-width': 1.5,
+          'line-opacity': 0.35,
+          'line-dasharray': [4, 3]
+        }
+      });
+
+      // ── Fetch jobs ────────────────────────────────────────────────────────
+      let jobs = [];
+      try {
+        const appId = 'b7919541';
+        const appKey = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
+        const response = await fetch(
+          `https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${appId}&app_key=${appKey}&where=Dallas,TX&results_per_page=50&distance=${SEARCH_RADIUS_MI}`
+        );
+        const data = await response.json();
+        jobs = (data.results || []).filter(j => j.latitude && j.longitude);
+      } catch (e) {
+        console.error('Adzuna fetch failed:', e);
+      }
+
+      // Update HUD count
+      const countEl = document.getElementById('count-val');
+      countEl.parentElement.innerHTML = `<span>${jobs.length}</span> jobs near you`;
+
+      // ── Build GeoJSON for clustering ──────────────────────────────────────
+      const geojson = {
+        type: 'FeatureCollection',
+        features: jobs.map(job => ({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [job.longitude, job.latitude] },
+          properties: {
+            title: job.title,
+            company: job.company?.display_name || 'Unknown',
+            url: job.redirect_url
+          }
+        }))
+      };
+
+      map.addSource('jobs', {
+        type: 'geojson',
+        data: geojson,
+        cluster: true,
+        clusterMaxZoom: 13,   // stop clustering at street level
+        clusterRadius: 48
+      });
+
+      // ── Cluster circles ───────────────────────────────────────────────────
+      map.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'jobs',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': [
+            'step', ['get', 'point_count'],
+            '#00cc6e',   // 1–4
+            5,  '#00ff88',  // 5–14
+            15, '#66ffbb'   // 15+
+          ],
+          'circle-radius': [
+            'step', ['get', 'point_count'],
+            18,
+            5,  24,
+            15, 30
+          ],
+          'circle-opacity': 0.9,
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': 'rgba(0,255,136,0.3)'
+        }
+      });
+
+      // Cluster count labels
+      map.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'jobs',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+          'text-size': 12
+        },
+        paint: {
+          'text-color': '#0a0a0a'
+        }
+      });
+
+      // ── Individual job pins (unclustered) ─────────────────────────────────
+      map.addLayer({
+        id: 'unclustered-point',
+        type: 'circle',
+        source: 'jobs',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': '#00ff88',
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            13, 5,
+            16, 9
+          ],
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': 'rgba(0,255,136,0.4)',
+          'circle-opacity': 0.95
+        }
+      });
+
+      // ── Interactions ──────────────────────────────────────────────────────
+
+      // Expand cluster on click
+      map.on('click', 'clusters', (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+        const clusterId = features[0].properties.cluster_id;
+        map.getSource('jobs').getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err) return;
+          map.easeTo({ center: features[0].geometry.coordinates, zoom, duration: 500 });
+        });
+      });
+
+      // Popup on individual pin click
+      map.on('click', 'unclustered-point', (e) => {
+        const { title, company, url } = e.features[0].properties;
+        const coords = e.features[0].geometry.coordinates.slice();
+
+        new mapboxgl.Popup({ closeButton: true, maxWidth: '260px' })
+          .setLngLat(coords)
+          .setHTML(`
+            <div class="popup-title">${title}</div>
+            <div class="popup-company">${company}</div>
+            <a class="popup-apply" href="${url}" target="_blank" rel="noopener">View & Apply →</a>
+          `)
+          .addTo(map);
+      });
+
+      // Cursor changes
+      map.on('mouseenter', 'clusters', () => map.getCanvas().style.cursor = 'pointer');
+      map.on('mouseleave', 'clusters', () => map.getCanvas().style.cursor = '');
+      map.on('mouseenter', 'unclustered-point', () => map.getCanvas().style.cursor = 'pointer');
+      map.on('mouseleave', 'unclustered-point', () => map.getCanvas().style.cursor = '');
+
+      // Zoom hint — fade after user zooms past 12
+      map.on('zoom', () => {
+        const hint = document.getElementById('zoom-hint');
+        hint.style.opacity = map.getZoom() > 12 ? '0' : '1';
+
+        // Fade radius at street level — it's done its job
+        const radiusFade = Math.max(0, Math.min(1, (14 - map.getZoom()) / 2));
+        map.setPaintProperty('radius-fill', 'fill-opacity', 0.03 * radiusFade);
+        map.setPaintProperty('radius-outline', 'line-opacity', 0.35 * radiusFade);
+      });
+
     });
   </script>
 </body>
