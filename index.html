@@ -7,82 +7,182 @@
   <script src='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js'></script>
   <link href='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css' rel='stylesheet' />
   <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; background: #0a0a0a; }
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #0a0a0a; overflow: hidden; }
 
-    /* HUD overlay */
-    #hud {
-      position: absolute;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
+    /* ── Layout ── */
+    #app { display: flex; height: 100vh; width: 100vw; }
+    #sidebar {
+      width: 340px;
+      min-width: 340px;
+      height: 100vh;
+      background: #0f0f0f;
+      border-right: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      flex-direction: column;
       z-index: 10;
+    }
+    #map-wrap { flex: 1; position: relative; }
+    #map { position: absolute; inset: 0; }
+
+    /* ── Sidebar header ── */
+    #sidebar-header {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .logo {
+      font-size: 16px;
+      font-weight: 800;
+      color: #00ff88;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .tagline {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Category filters ── */
+    #filter-wrap {
+      padding: 12px 12px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    #filter-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    #filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .filter-btn {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1.5px solid;
+      cursor: pointer;
+      transition: all 0.18s;
+      background: transparent;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      opacity: 0.45;
+    }
+    .filter-btn.active { opacity: 1; }
+
+    /* ── Job count bar ── */
+    #count-bar {
+      padding: 10px 16px 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    #count-bar span { color: #fff; font-weight: 700; }
+
+    /* ── Job list ── */
+    #job-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 8px;
+    }
+    #job-list::-webkit-scrollbar { width: 4px; }
+    #job-list::-webkit-scrollbar-track { background: transparent; }
+    #job-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    .job-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 11px 13px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 3px solid;
+    }
+    .job-card:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+      transform: translateX(2px);
+    }
+    .job-card.active {
+      background: rgba(255,255,255,0.07);
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 3px;
+      line-height: 1.35;
+    }
+    .card-company {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 6px;
+    }
+    .card-footer {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: rgba(10,10,10,0.82);
-      border: 1px solid rgba(0,255,136,0.18);
-      border-radius: 12px;
-      padding: 10px 18px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      justify-content: space-between;
     }
-    #hud .logo {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      color: #00ff88;
-      white-space: nowrap;
-    }
-    #hud .divider {
-      width: 1px;
-      height: 18px;
-      background: rgba(255,255,255,0.12);
-    }
-    #hud .job-count {
-      font-size: 13px;
-      color: rgba(255,255,255,0.6);
-      white-space: nowrap;
-    }
-    #hud .job-count span {
-      color: #fff;
+    .card-cat {
+      font-size: 10px;
       font-weight: 600;
-    }
-
-    /* Radius label */
-    #radius-label {
-      position: absolute;
-      bottom: 36px;
-      left: 16px;
-      z-index: 10;
-      background: rgba(10,10,10,0.75);
-      border: 1px solid rgba(0,255,136,0.15);
-      border-radius: 8px;
-      padding: 7px 12px;
-      color: rgba(255,255,255,0.55);
-      font-size: 12px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.06);
       letter-spacing: 0.03em;
-      backdrop-filter: blur(6px);
     }
-    #radius-label span { color: #00ff88; font-weight: 600; }
+    .card-apply {
+      font-size: 10px;
+      font-weight: 700;
+      color: #00ff88;
+      text-decoration: none;
+      letter-spacing: 0.04em;
+    }
+    .card-apply:hover { text-decoration: underline; }
 
-    /* Zoom hint */
+    #empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(255,255,255,0.25);
+      font-size: 13px;
+      line-height: 1.6;
+      display: none;
+    }
+    #loading-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(255,255,255,0.3);
+      font-size: 12px;
+    }
+    .pulse { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity:0.3; } 50% { opacity:0.8; } }
+
+    /* ── Map overlays ── */
     #zoom-hint {
       position: absolute;
-      bottom: 36px;
-      right: 16px;
-      z-index: 10;
+      bottom: 28px;
+      right: 12px;
+      z-index: 5;
       background: rgba(10,10,10,0.75);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 8px;
-      padding: 7px 12px;
-      color: rgba(255,255,255,0.4);
+      padding: 6px 11px;
+      color: rgba(255,255,255,0.35);
       font-size: 11px;
       transition: opacity 0.4s;
+      pointer-events: none;
     }
 
-    /* Custom popup */
+    /* ── Popup ── */
     .mapboxgl-popup-content {
       background: #111 !important;
       border: 1px solid rgba(0,255,136,0.25) !important;
@@ -92,270 +192,345 @@
       min-width: 200px;
     }
     .mapboxgl-popup-tip { display: none !important; }
-    .mapboxgl-popup-close-button {
-      color: rgba(255,255,255,0.4) !important;
-      font-size: 16px !important;
-      top: 6px !important;
-      right: 8px !important;
-    }
-    .popup-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 4px;
-      line-height: 1.3;
-      padding-right: 16px;
-    }
-    .popup-company {
-      font-size: 12px;
-      color: rgba(255,255,255,0.5);
-      margin-bottom: 10px;
-    }
+    .mapboxgl-popup-close-button { color: rgba(255,255,255,0.4) !important; font-size:16px !important; top:6px !important; right:8px !important; }
+    .popup-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:4px; line-height:1.3; padding-right:16px; }
+    .popup-company { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:10px; }
     .popup-apply {
-      display: inline-block;
-      font-size: 12px;
-      font-weight: 600;
-      color: #0a0a0a;
-      background: #00ff88;
-      border-radius: 6px;
-      padding: 5px 12px;
-      text-decoration: none;
-      letter-spacing: 0.02em;
-      transition: opacity 0.2s;
+      display:inline-block; font-size:12px; font-weight:600;
+      color:#0a0a0a; background:#00ff88; border-radius:6px;
+      padding:5px 12px; text-decoration:none; letter-spacing:0.02em;
     }
-    .popup-apply:hover { opacity: 0.85; }
+    .popup-apply:hover { opacity:0.85; }
+
+    /* ── Mobile responsive ── */
+    @media (max-width: 640px) {
+      #app { flex-direction: column; }
+      #sidebar { width: 100%; min-width: unset; height: 45vh; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); }
+      #map-wrap { flex: 1; }
+    }
   </style>
 </head>
 <body>
+<div id="app">
 
-  <div id="map"></div>
+  <!-- ── Sidebar ── -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div class="logo">Labor Network</div>
+      <div class="tagline">Hyperlocal jobs · Dallas–Fort Worth</div>
+    </div>
 
-  <div id="hud">
-    <div class="logo">Labor Network</div>
-    <div class="divider"></div>
-    <div class="job-count">Loading jobs<span id="count-val"></span></div>
+    <div id="filter-wrap">
+      <div id="filter-label">Filter by category</div>
+      <div id="filters"></div>
+    </div>
+
+    <div id="count-bar"><span id="job-count">—</span> jobs found</div>
+
+    <div id="job-list">
+      <div id="loading-state" class="pulse">Loading jobs near you…</div>
+      <div id="empty-state">No jobs match this filter.<br>Try selecting another category.</div>
+    </div>
   </div>
 
-  <div id="radius-label">Searching within <span id="radius-val">25 mi</span> of Dallas, TX</div>
-  <div id="zoom-hint">Zoom in to explore your neighborhood →</div>
+  <!-- ── Map ── -->
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="zoom-hint">Zoom in to explore your neighborhood →</div>
+  </div>
 
-  <script>
-    mapboxgl.accessToken = 'pk.eyJ1IjoiY29yZXlkZXZkZnciLCJhIjoiY21xaHVvanM2MDE3bDJ0cHB4NTF4andpdiJ9.7zXPq8gI54J5-OEEh69E5w';
+</div>
 
-    const CENTER = [-96.7970, 33.0137];
-    const SEARCH_RADIUS_MI = 25;
+<script>
+  // ── Config ──────────────────────────────────────────────────────────────
+  mapboxgl.accessToken = 'pk.eyJ1IjoiY29yZXlkZXZkZnciLCJhIjoiY21xaHVvanM2MDE3bDJ0cHB4NTF4andpdiJ9.7zXPq8gI54J5-OEEh69E5w';
+  const APP_ID  = 'b7919541';
+  const APP_KEY = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
+  const CENTER  = [-96.7970, 33.0137];
+  const RADIUS  = 25;
 
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: CENTER,
-      zoom: 10,
-      minZoom: 8,
-      maxZoom: 17
-    });
+  // ── Categories ──────────────────────────────────────────────────────────
+  const CATEGORIES = [
+    { tag: 'all',                         label: 'All',          color: '#00ff88' },
+    { tag: 'logistics-warehouse-jobs',    label: 'Warehouse',    color: '#ff9f43' },
+    { tag: 'manufacturing-jobs',          label: 'Manufacturing',color: '#54a0ff' },
+    { tag: 'trade-construction-jobs',     label: 'Trades',       color: '#ffd32a' },
+    { tag: 'retail-jobs',                 label: 'Retail',       color: '#c56cf0' },
+    { tag: 'customer-services-jobs',      label: 'Customer Svc', color: '#ff6b81' },
+    { tag: 'engineering-jobs',            label: 'Engineering',  color: '#0be881' },
+    { tag: 'admin-jobs',                  label: 'Admin',        color: '#67e8f9' },
+  ];
 
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+  // color lookup by tag
+  const colorMap = {};
+  CATEGORIES.forEach(c => { colorMap[c.tag] = c.color; });
 
-    // --- Turf-free circle: generate a GeoJSON polygon approximating a radius circle ---
-    function makeCircleGeoJSON(center, radiusMiles, steps = 64) {
-      const coords = [];
-      const R = 3958.8; // Earth radius miles
-      const lat = center[1] * Math.PI / 180;
-      const lng = center[0] * Math.PI / 180;
-      for (let i = 0; i <= steps; i++) {
-        const angle = (i / steps) * 2 * Math.PI;
-        const dLat = (radiusMiles / R) * Math.cos(angle);
-        const dLng = (radiusMiles / R) * Math.sin(angle) / Math.cos(lat);
-        coords.push([
-          center[0] + dLng * 180 / Math.PI,
-          center[1] + dLat * 180 / Math.PI
-        ]);
-      }
-      return {
-        type: 'FeatureCollection',
-        features: [{
-          type: 'Feature',
-          geometry: { type: 'Polygon', coordinates: [coords] }
-        }]
-      };
+  // ── State ────────────────────────────────────────────────────────────────
+  let allJobs = [];       // all fetched jobs
+  let activeFilter = 'all';
+  let activePopup = null;
+  let activeCard  = null;
+
+  // ── Map init ─────────────────────────────────────────────────────────────
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: CENTER,
+    zoom: 10,
+    minZoom: 8,
+    maxZoom: 17
+  });
+  map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+
+  // ── Circle helper ────────────────────────────────────────────────────────
+  function makeCircle(center, radiusMiles, steps = 64) {
+    const coords = [];
+    const R = 3958.8;
+    const lat = center[1] * Math.PI / 180;
+    for (let i = 0; i <= steps; i++) {
+      const a = (i / steps) * 2 * Math.PI;
+      coords.push([
+        center[0] + (radiusMiles / R) * Math.sin(a) / Math.cos(lat) * 180 / Math.PI,
+        center[1] + (radiusMiles / R) * Math.cos(a) * 180 / Math.PI
+      ]);
     }
+    return { type:'FeatureCollection', features:[{ type:'Feature', geometry:{ type:'Polygon', coordinates:[coords] } }] };
+  }
 
-    map.on('load', async () => {
+  // ── Build filter buttons ─────────────────────────────────────────────────
+  const filtersEl = document.getElementById('filters');
+  CATEGORIES.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (cat.tag === 'all' ? ' active' : '');
+    btn.textContent = cat.label;
+    btn.dataset.tag = cat.tag;
+    btn.style.borderColor = cat.color;
+    btn.style.color = cat.color;
+    btn.addEventListener('click', () => setFilter(cat.tag));
+    filtersEl.appendChild(btn);
+  });
 
-      // ── Radius circle layers ──────────────────────────────────────────────
-      const circleGeoJSON = makeCircleGeoJSON(CENTER, SEARCH_RADIUS_MI);
-
-      map.addSource('radius-circle', { type: 'geojson', data: circleGeoJSON });
-
-      // Soft filled area
-      map.addLayer({
-        id: 'radius-fill',
-        type: 'fill',
-        source: 'radius-circle',
-        paint: {
-          'fill-color': '#00ff88',
-          'fill-opacity': 0.03
-        }
-      });
-
-      // Glowing border
-      map.addLayer({
-        id: 'radius-outline',
-        type: 'line',
-        source: 'radius-circle',
-        paint: {
-          'line-color': '#00ff88',
-          'line-width': 1.5,
-          'line-opacity': 0.35,
-          'line-dasharray': [4, 3]
-        }
-      });
-
-      // ── Fetch jobs ────────────────────────────────────────────────────────
-      let jobs = [];
-      try {
-        const appId = 'b7919541';
-        const appKey = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
-        const response = await fetch(
-          `https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${appId}&app_key=${appKey}&where=Dallas,TX&results_per_page=50&distance=${SEARCH_RADIUS_MI}`
-        );
-        const data = await response.json();
-        jobs = (data.results || []).filter(j => j.latitude && j.longitude);
-      } catch (e) {
-        console.error('Adzuna fetch failed:', e);
-      }
-
-      // Update HUD count
-      const countEl = document.getElementById('count-val');
-      countEl.parentElement.innerHTML = `<span>${jobs.length}</span> jobs near you`;
-
-      // ── Build GeoJSON for clustering ──────────────────────────────────────
-      const geojson = {
-        type: 'FeatureCollection',
-        features: jobs.map(job => ({
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [job.longitude, job.latitude] },
-          properties: {
-            title: job.title,
-            company: job.company?.display_name || 'Unknown',
-            url: job.redirect_url
-          }
-        }))
-      };
-
-      map.addSource('jobs', {
-        type: 'geojson',
-        data: geojson,
-        cluster: true,
-        clusterMaxZoom: 13,   // stop clustering at street level
-        clusterRadius: 48
-      });
-
-      // ── Cluster circles ───────────────────────────────────────────────────
-      map.addLayer({
-        id: 'clusters',
-        type: 'circle',
-        source: 'jobs',
-        filter: ['has', 'point_count'],
-        paint: {
-          'circle-color': [
-            'step', ['get', 'point_count'],
-            '#00cc6e',   // 1–4
-            5,  '#00ff88',  // 5–14
-            15, '#66ffbb'   // 15+
-          ],
-          'circle-radius': [
-            'step', ['get', 'point_count'],
-            18,
-            5,  24,
-            15, 30
-          ],
-          'circle-opacity': 0.9,
-          'circle-stroke-width': 1.5,
-          'circle-stroke-color': 'rgba(0,255,136,0.3)'
-        }
-      });
-
-      // Cluster count labels
-      map.addLayer({
-        id: 'cluster-count',
-        type: 'symbol',
-        source: 'jobs',
-        filter: ['has', 'point_count'],
-        layout: {
-          'text-field': '{point_count_abbreviated}',
-          'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-          'text-size': 12
-        },
-        paint: {
-          'text-color': '#0a0a0a'
-        }
-      });
-
-      // ── Individual job pins (unclustered) ─────────────────────────────────
-      map.addLayer({
-        id: 'unclustered-point',
-        type: 'circle',
-        source: 'jobs',
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-color': '#00ff88',
-          'circle-radius': [
-            'interpolate', ['linear'], ['zoom'],
-            13, 5,
-            16, 9
-          ],
-          'circle-stroke-width': 1.5,
-          'circle-stroke-color': 'rgba(0,255,136,0.4)',
-          'circle-opacity': 0.95
-        }
-      });
-
-      // ── Interactions ──────────────────────────────────────────────────────
-
-      // Expand cluster on click
-      map.on('click', 'clusters', (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-        const clusterId = features[0].properties.cluster_id;
-        map.getSource('jobs').getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err) return;
-          map.easeTo({ center: features[0].geometry.coordinates, zoom, duration: 500 });
-        });
-      });
-
-      // Popup on individual pin click
-      map.on('click', 'unclustered-point', (e) => {
-        const { title, company, url } = e.features[0].properties;
-        const coords = e.features[0].geometry.coordinates.slice();
-
-        new mapboxgl.Popup({ closeButton: true, maxWidth: '260px' })
-          .setLngLat(coords)
-          .setHTML(`
-            <div class="popup-title">${title}</div>
-            <div class="popup-company">${company}</div>
-            <a class="popup-apply" href="${url}" target="_blank" rel="noopener">View & Apply →</a>
-          `)
-          .addTo(map);
-      });
-
-      // Cursor changes
-      map.on('mouseenter', 'clusters', () => map.getCanvas().style.cursor = 'pointer');
-      map.on('mouseleave', 'clusters', () => map.getCanvas().style.cursor = '');
-      map.on('mouseenter', 'unclustered-point', () => map.getCanvas().style.cursor = 'pointer');
-      map.on('mouseleave', 'unclustered-point', () => map.getCanvas().style.cursor = '');
-
-      // Zoom hint — fade after user zooms past 12
-      map.on('zoom', () => {
-        const hint = document.getElementById('zoom-hint');
-        hint.style.opacity = map.getZoom() > 12 ? '0' : '1';
-
-        // Fade radius at street level — it's done its job
-        const radiusFade = Math.max(0, Math.min(1, (14 - map.getZoom()) / 2));
-        map.setPaintProperty('radius-fill', 'fill-opacity', 0.03 * radiusFade);
-        map.setPaintProperty('radius-outline', 'line-opacity', 0.35 * radiusFade);
-      });
-
+  function setFilter(tag) {
+    activeFilter = tag;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.tag === tag);
     });
-  </script>
+    renderSidebar();
+    updateMapLayer();
+  }
+
+  // ── Filtered jobs ────────────────────────────────────────────────────────
+  function filteredJobs() {
+    if (activeFilter === 'all') return allJobs;
+    return allJobs.filter(j => j.category === activeFilter);
+  }
+
+  // ── Sidebar render ───────────────────────────────────────────────────────
+  function renderSidebar() {
+    const jobs = filteredJobs();
+    const list = document.getElementById('job-list');
+    const empty = document.getElementById('empty-state');
+    const loading = document.getElementById('loading-state');
+
+    loading.style.display = 'none';
+    empty.style.display = jobs.length === 0 ? 'block' : 'none';
+    document.getElementById('job-count').textContent = jobs.length;
+
+    // Remove old cards
+    list.querySelectorAll('.job-card').forEach(el => el.remove());
+
+    const catInfo = tag => CATEGORIES.find(c => c.tag === tag) || CATEGORIES[0];
+
+    jobs.forEach((job, i) => {
+      const cat = catInfo(job.category);
+      const card = document.createElement('div');
+      card.className = 'job-card';
+      card.dataset.index = i;
+      card.style.borderLeftColor = cat.color;
+      card.innerHTML = `
+        <div class="card-title">${job.title}</div>
+        <div class="card-company">${job.company}</div>
+        <div class="card-footer">
+          <span class="card-cat" style="color:${cat.color}">${cat.label}</span>
+          <a class="card-apply" href="${job.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Apply →</a>
+        </div>
+      `;
+      card.addEventListener('click', () => focusJob(job, card));
+      list.appendChild(card);
+    });
+  }
+
+  // ── Focus job (sidebar → map) ────────────────────────────────────────────
+  function focusJob(job, card) {
+    if (activeCard) activeCard.classList.remove('active');
+    card.classList.add('active');
+    activeCard = card;
+
+    if (activePopup) activePopup.remove();
+
+    map.flyTo({ center: [job.lng, job.lat], zoom: Math.max(map.getZoom(), 13), duration: 600 });
+
+    const cat = CATEGORIES.find(c => c.tag === job.category) || CATEGORIES[0];
+    activePopup = new mapboxgl.Popup({ closeButton: true, maxWidth: '260px' })
+      .setLngLat([job.lng, job.lat])
+      .setHTML(`
+        <div class="popup-title">${job.title}</div>
+        <div class="popup-company">${job.company}</div>
+        <a class="popup-apply" href="${job.url}" target="_blank" rel="noopener">View & Apply →</a>
+      `)
+      .addTo(map);
+  }
+
+  // ── Update map GeoJSON ───────────────────────────────────────────────────
+  function updateMapLayer() {
+    const jobs = filteredJobs();
+    const geojson = {
+      type: 'FeatureCollection',
+      features: jobs.map(job => ({
+        type: 'Feature',
+        geometry: { type:'Point', coordinates:[job.lng, job.lat] },
+        properties: { title: job.title, company: job.company, url: job.url, category: job.category, color: colorMap[job.category] || '#00ff88' }
+      }))
+    };
+    if (map.getSource('jobs')) {
+      map.getSource('jobs').setData(geojson);
+    }
+  }
+
+  // ── Fetch jobs (multi-category) ──────────────────────────────────────────
+  async function fetchCategory(tag) {
+    const catParam = (tag === 'all') ? '' : `&category=${tag}`;
+    try {
+      const res = await fetch(
+        `https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${APP_ID}&app_key=${APP_KEY}&where=Dallas,TX&results_per_page=50&distance=${RADIUS}${catParam}`
+      );
+      const data = await res.json();
+      return (data.results || [])
+        .filter(j => j.latitude && j.longitude)
+        .map(j => ({
+          id:      j.id,
+          title:   j.title,
+          company: j.company?.display_name || 'Unknown',
+          url:     j.redirect_url,
+          lat:     j.latitude,
+          lng:     j.longitude,
+          category: tag === 'all' ? (j.category?.tag || 'all') : tag
+        }));
+    } catch(e) {
+      console.warn('Fetch failed for', tag, e);
+      return [];
+    }
+  }
+
+  // ── Map load ─────────────────────────────────────────────────────────────
+  map.on('load', async () => {
+
+    // Radius circle
+    map.addSource('radius-circle', { type:'geojson', data: makeCircle(CENTER, RADIUS) });
+    map.addLayer({ id:'radius-fill', type:'fill', source:'radius-circle', paint:{ 'fill-color':'#00ff88', 'fill-opacity':0.03 } });
+    map.addLayer({ id:'radius-outline', type:'line', source:'radius-circle', paint:{ 'line-color':'#00ff88', 'line-width':1.5, 'line-opacity':0.3, 'line-dasharray':[4,3] } });
+
+    // Jobs source (empty to start)
+    map.addSource('jobs', {
+      type: 'geojson',
+      data: { type:'FeatureCollection', features:[] },
+      cluster: true,
+      clusterMaxZoom: 13,
+      clusterRadius: 48
+    });
+
+    // Cluster circles
+    map.addLayer({
+      id: 'clusters', type:'circle', source:'jobs',
+      filter: ['has','point_count'],
+      paint: {
+        'circle-color': ['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],
+        'circle-radius': ['step',['get','point_count'],18,5,24,15,30],
+        'circle-opacity': 0.9,
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': 'rgba(0,255,136,0.3)'
+      }
+    });
+
+    map.addLayer({
+      id:'cluster-count', type:'symbol', source:'jobs',
+      filter:['has','point_count'],
+      layout:{ 'text-field':'{point_count_abbreviated}', 'text-font':['DIN Pro Bold','Arial Unicode MS Bold'], 'text-size':12 },
+      paint:{ 'text-color':'#0a0a0a' }
+    });
+
+    // Unclustered — color by category
+    map.addLayer({
+      id:'unclustered-point', type:'circle', source:'jobs',
+      filter:['!',['has','point_count']],
+      paint: {
+        'circle-color': ['coalesce',['get','color'],'#00ff88'],
+        'circle-radius': ['interpolate',['linear'],['zoom'],13,6,16,10],
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': 'rgba(255,255,255,0.2)',
+        'circle-opacity': 0.95
+      }
+    });
+
+    // Cluster click → expand
+    map.on('click','clusters', e => {
+      const f = map.queryRenderedFeatures(e.point, { layers:['clusters'] });
+      map.getSource('jobs').getClusterExpansionZoom(f[0].properties.cluster_id, (err, zoom) => {
+        if (!err) map.easeTo({ center: f[0].geometry.coordinates, zoom, duration:500 });
+      });
+    });
+
+    // Pin click → popup + highlight card
+    map.on('click','unclustered-point', e => {
+      const { title, company, url } = e.features[0].properties;
+      const coords = e.features[0].geometry.coordinates.slice();
+      if (activePopup) activePopup.remove();
+      activePopup = new mapboxgl.Popup({ closeButton:true, maxWidth:'260px' })
+        .setLngLat(coords)
+        .setHTML(`<div class="popup-title">${title}</div><div class="popup-company">${company}</div><a class="popup-apply" href="${url}" target="_blank" rel="noopener">View & Apply →</a>`)
+        .addTo(map);
+
+      // Highlight matching sidebar card
+      const jobs = filteredJobs();
+      const idx = jobs.findIndex(j => j.title === title && j.company === company);
+      if (idx >= 0) {
+        const card = document.querySelector(`.job-card[data-index="${idx}"]`);
+        if (card) {
+          if (activeCard) activeCard.classList.remove('active');
+          card.classList.add('active');
+          activeCard = card;
+          card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        }
+      }
+    });
+
+    map.on('mouseenter','clusters', () => map.getCanvas().style.cursor='pointer');
+    map.on('mouseleave','clusters', () => map.getCanvas().style.cursor='');
+    map.on('mouseenter','unclustered-point', () => map.getCanvas().style.cursor='pointer');
+    map.on('mouseleave','unclustered-point', () => map.getCanvas().style.cursor='');
+
+    map.on('zoom', () => {
+      const hint = document.getElementById('zoom-hint');
+      const z = map.getZoom();
+      hint.style.opacity = z > 12 ? '0' : '1';
+      const fade = Math.max(0, Math.min(1, (14-z)/2));
+      map.setPaintProperty('radius-fill','fill-opacity', 0.03*fade);
+      map.setPaintProperty('radius-outline','line-opacity', 0.3*fade);
+    });
+
+    // ── Fetch all non-medical categories in parallel ──
+    const tagsToFetch = CATEGORIES.filter(c => c.tag !== 'all').map(c => c.tag);
+    const results = await Promise.all(tagsToFetch.map(fetchCategory));
+
+    // Deduplicate by job id
+    const seen = new Set();
+    results.flat().forEach(job => {
+      if (!seen.has(job.id)) { seen.add(job.id); allJobs.push(job); }
+    });
+
+    renderSidebar();
+    updateMapLayer();
+  });
+</script>
 </body>
 </html>
