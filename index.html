@@ -2,18 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Labor Network</title>
+  <meta name="description" content="Hyperlocal jobs in your DFW neighborhood"/>
+  <meta name="theme-color" content="#0a0a0a"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Labor Network"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
   <script src='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js'></script>
   <link href='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css' rel='stylesheet' />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: #0a0a0a; overflow: hidden; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0a0a; overflow: hidden;
+      /* Safe area for notched phones */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
 
-    /* ── Layout ── */
-    #app { display: flex; height: 100vh; width: 100vw; }
+    #app { display: flex; height: 100dvh; width: 100vw; }
     #sidebar {
-      width: 320px; min-width: 320px; height: 100vh;
+      width: 320px; min-width: 320px; height: 100dvh;
       background: #0f0f0f;
       border-right: 1px solid rgba(255,255,255,0.07);
       display: flex; flex-direction: column; z-index: 10;
@@ -21,105 +34,114 @@
     #map-wrap { flex: 1; position: relative; }
     #map { position: absolute; inset: 0; }
 
-    /* ── Vignette overlay ── */
+    /* ── Vignette — size set dynamically via JS ── */
     #vignette {
       position: absolute; inset: 0; z-index: 2;
       pointer-events: none;
+      /* default — overridden by JS once location known */
       background: radial-gradient(
-        ellipse 62% 62% at 50% 50%,
-        transparent 38%,
-        rgba(5,5,5,0.45) 62%,
-        rgba(5,5,5,0.82) 80%,
-        rgba(5,5,5,0.96) 100%
+        ellipse 60% 60% at 50% 50%,
+        transparent 35%,
+        rgba(5,5,5,0.5) 58%,
+        rgba(5,5,5,0.88) 78%,
+        rgba(5,5,5,0.97) 100%
       );
+      transition: background 0.6s ease;
     }
 
     /* ── Sidebar header ── */
     #sidebar-header {
-      padding: 16px 16px 12px;
+      padding: 16px 14px 12px;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       flex-shrink: 0;
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
     .logo { font-size: 15px; font-weight: 800; color: #00ff88; letter-spacing: 0.05em; }
-    .tagline { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.03em; margin-top: 1px; }
+    .tagline { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 1px; }
 
-    /* ── Locate button ── */
     #locate-btn {
       display: flex; align-items: center; gap: 5px;
       font-size: 11px; font-weight: 600; color: #00ff88;
-      background: rgba(0,255,136,0.08);
-      border: 1px solid rgba(0,255,136,0.25);
-      border-radius: 8px; padding: 5px 10px;
-      cursor: pointer; transition: all 0.18s; white-space: nowrap;
-      flex-shrink: 0;
+      background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.25);
+      border-radius: 8px; padding: 6px 10px; cursor: pointer;
+      transition: all 0.18s; white-space: nowrap; flex-shrink: 0; font-family: inherit;
     }
-    #locate-btn:hover { background: rgba(0,255,136,0.15); }
+    #locate-btn:hover { background: rgba(0,255,136,0.16); }
+    #locate-btn.located { color: #fff; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); }
+    #locate-btn.locating { opacity: 0.5; pointer-events: none; }
     #locate-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
-    #locate-btn.locating { opacity: 0.6; pointer-events: none; animation: pulse 1s infinite; }
 
-    /* ── Filter dropdown ── */
+    /* ── Filter ── */
     #filter-wrap {
-      padding: 10px 12px 10px;
+      padding: 10px 12px;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       flex-shrink: 0;
     }
-    #filter-select-wrap { position: relative; }
+    #filter-select-wrap { position: relative; display: flex; align-items: center; }
+    #cat-dot {
+      position: absolute; left: 10px; width: 8px; height: 8px;
+      border-radius: 50%; pointer-events: none; transition: background 0.2s; z-index: 1;
+    }
     #filter-select-wrap::after {
-      content: '▾';
-      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-      color: rgba(255,255,255,0.35); font-size: 11px; pointer-events: none;
+      content: '▾'; position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%); color: rgba(255,255,255,0.3); font-size: 11px; pointer-events: none;
     }
     #category-select {
       width: 100%; appearance: none; -webkit-appearance: none;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; padding: 8px 28px 8px 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; padding: 9px 28px 9px 26px;
       color: #fff; font-size: 12px; font-weight: 600;
-      cursor: pointer; outline: none;
-      font-family: inherit;
+      cursor: pointer; outline: none; font-family: inherit;
     }
     #category-select:focus { border-color: rgba(0,255,136,0.4); }
     #category-select option { background: #1a1a1a; color: #fff; }
 
-    /* Active category indicator dot */
-    #cat-dot {
-      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-      margin-right: 6px; vertical-align: middle; transition: background 0.2s;
-    }
+    /* ── Job list section ── */
+    #list-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ── Job count bar ── */
     #count-bar {
-      padding: 8px 16px 6px; font-size: 11px;
+      padding: 8px 14px 6px; font-size: 11px;
       color: rgba(255,255,255,0.35); flex-shrink: 0;
       border-bottom: 1px solid rgba(255,255,255,0.04);
-      display: flex; align-items: center; gap: 6px;
     }
     #count-bar strong { color: #fff; font-weight: 700; }
 
-    /* ── Job list ── */
     #job-list { flex: 1; overflow-y: auto; padding: 8px; }
     #job-list::-webkit-scrollbar { width: 3px; }
-    #job-list::-webkit-scrollbar-track { background: transparent; }
     #job-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
 
+    /* ── Pre-select prompt ── */
+    #pre-select {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px 24px; text-align: center; gap: 12px;
+    }
+    #pre-select .ps-icon {
+      font-size: 28px; opacity: 0.4;
+    }
+    #pre-select .ps-title {
+      font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.6);
+    }
+    #pre-select .ps-sub {
+      font-size: 11px; color: rgba(255,255,255,0.25); line-height: 1.6;
+    }
+
     .job-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
       border-radius: 10px; padding: 11px 13px; margin-bottom: 6px;
       cursor: pointer; transition: all 0.15s; border-left: 3px solid;
     }
     .job-card:hover { background: rgba(255,255,255,0.06); transform: translateX(2px); }
-    .job-card.active { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+    .job-card.active { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); }
     .card-title { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 3px; line-height: 1.35; }
     .card-company { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
     .card-footer { display: flex; align-items: center; justify-content: space-between; }
     .card-cat { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.06); letter-spacing: 0.02em; }
-    .card-apply { font-size: 10px; font-weight: 700; color: #00ff88; text-decoration: none; letter-spacing: 0.04em; }
+    .card-apply { font-size: 10px; font-weight: 700; color: #00ff88; text-decoration: none; }
     .card-apply:hover { text-decoration: underline; }
 
-    #empty-state { text-align:center; padding:40px 20px; color:rgba(255,255,255,0.25); font-size:13px; line-height:1.6; display:none; }
-    #loading-state { text-align:center; padding:40px 20px; color:rgba(255,255,255,0.3); font-size:12px; }
+    #empty-state { text-align:center; padding:32px 20px; color:rgba(255,255,255,0.25); font-size:12px; line-height:1.6; display:none; }
+    #loading-state { text-align:center; padding:32px 20px; color:rgba(255,255,255,0.3); font-size:12px; display:none; }
     .pulse { animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
 
@@ -132,6 +154,23 @@
       transition: opacity 0.4s; pointer-events: none;
     }
 
+    /* ── Location permission banner ── */
+    #location-banner {
+      position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
+      z-index: 8; background: rgba(15,15,15,0.92);
+      border: 1px solid rgba(0,255,136,0.3); border-radius: 10px;
+      padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+      font-size: 12px; color: rgba(255,255,255,0.7); white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      opacity: 0; pointer-events: none; transition: opacity 0.4s;
+    }
+    #location-banner.show { opacity: 1; pointer-events: auto; }
+    #location-banner button {
+      font-size: 11px; font-weight: 700; color: #0a0a0a;
+      background: #00ff88; border: none; border-radius: 6px;
+      padding: 4px 10px; cursor: pointer; font-family: inherit;
+    }
+
     /* ── Popup ── */
     .mapboxgl-popup-content {
       background: #111 !important; border: 1px solid rgba(0,255,136,0.25) !important;
@@ -142,14 +181,14 @@
     .mapboxgl-popup-close-button { color:rgba(255,255,255,0.4)!important; font-size:16px!important; top:6px!important; right:8px!important; }
     .popup-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:4px; line-height:1.3; padding-right:16px; }
     .popup-company { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:10px; }
-    .popup-apply { display:inline-block; font-size:12px; font-weight:600; color:#0a0a0a; background:#00ff88; border-radius:6px; padding:5px 12px; text-decoration:none; letter-spacing:0.02em; }
+    .popup-apply { display:inline-block; font-size:12px; font-weight:600; color:#0a0a0a; background:#00ff88; border-radius:6px; padding:5px 12px; text-decoration:none; }
     .popup-apply:hover { opacity:0.85; }
 
     /* ── Mobile ── */
     @media (max-width: 640px) {
       #app { flex-direction: column; }
-      #sidebar { width:100%; min-width:unset; height:44vh; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); }
-      #map-wrap { flex:1; }
+      #sidebar { width:100%; min-width:unset; height:auto; max-height:48dvh; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); }
+      #map-wrap { flex:1; min-height: 0; }
     }
   </style>
 </head>
@@ -162,36 +201,47 @@
         <div class="logo">Labor Network</div>
         <div class="tagline">Hyperlocal jobs · DFW</div>
       </div>
-      <button id="locate-btn" title="Use my location">
+      <button id="locate-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
-          <circle cx="12" cy="12" r="8" stroke-opacity="0.4"/>
+          <circle cx="12" cy="12" r="8" stroke-opacity="0.35"/>
         </svg>
-        Locate me
+        Share location
       </button>
     </div>
 
     <div id="filter-wrap">
       <div id="filter-select-wrap">
         <span id="cat-dot"></span>
-        <select id="category-select" style="padding-left:24px"></select>
+        <select id="category-select"></select>
       </div>
     </div>
 
-    <div id="count-bar">
-      <strong id="job-count">—</strong> jobs found
+    <!-- shown only after a category is chosen -->
+    <div id="list-section" style="display:none">
+      <div id="count-bar"><strong id="job-count">—</strong> jobs found</div>
+      <div id="job-list">
+        <div id="loading-state" class="pulse">Loading…</div>
+        <div id="empty-state">No jobs in this category nearby.<br>Try another filter.</div>
+      </div>
     </div>
 
-    <div id="job-list">
-      <div id="loading-state" class="pulse">Loading jobs near you…</div>
-      <div id="empty-state">No jobs match this filter.<br>Try selecting another category.</div>
+    <!-- default state before filter chosen -->
+    <div id="pre-select">
+      <div class="ps-icon">📍</div>
+      <div class="ps-title">Choose a job category</div>
+      <div class="ps-sub">Select an industry above to see<br>openings on the map near you.</div>
     </div>
   </div>
 
   <div id="map-wrap">
     <div id="map"></div>
     <div id="vignette"></div>
-    <div id="zoom-hint">Zoom in to explore →</div>
+    <div id="zoom-hint">Zoom in to explore your neighborhood →</div>
+    <div id="location-banner">
+      📍 Share your location for a tighter radius
+      <button onclick="requestLocation()">Allow</button>
+    </div>
   </div>
 
 </div>
@@ -200,52 +250,76 @@
   const APP_ID  = 'b7919541';
   const APP_KEY = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
   let CENTER    = [-96.7970, 33.0137];
+  let userLocated = false;
   const RADIUS  = 25;
 
   const CATEGORIES = [
-    { tag:'all',                       label:'All Categories',  color:'#00ff88' },
-    { tag:'logistics-warehouse-jobs',  label:'Warehouse',       color:'#ff9f43' },
-    { tag:'manufacturing-jobs',        label:'Manufacturing',   color:'#54a0ff' },
-    { tag:'trade-construction-jobs',   label:'Trades',          color:'#ffd32a' },
-    { tag:'retail-jobs',               label:'Retail',          color:'#c56cf0' },
-    { tag:'customer-services-jobs',    label:'Customer Service',color:'#ff6b81' },
-    { tag:'engineering-jobs',          label:'Engineering',     color:'#0be881' },
-    { tag:'admin-jobs',                label:'Admin',           color:'#67e8f9' },
+    { tag:'placeholder',               label:'Select a category…', color:'#555' },
+    { tag:'all',                       label:'All Categories',      color:'#00ff88' },
+    { tag:'logistics-warehouse-jobs',  label:'Warehouse & Logistics', color:'#ff9f43' },
+    { tag:'manufacturing-jobs',        label:'Manufacturing',       color:'#54a0ff' },
+    { tag:'trade-construction-jobs',   label:'Trades & Construction', color:'#ffd32a' },
+    { tag:'retail-jobs',               label:'Retail',              color:'#c56cf0' },
+    { tag:'customer-services-jobs',    label:'Customer Service',    color:'#ff6b81' },
+    { tag:'engineering-jobs',          label:'Engineering',         color:'#0be881' },
+    { tag:'admin-jobs',                label:'Admin & Office',      color:'#67e8f9' },
   ];
   const colorMap = {};
   CATEGORIES.forEach(c => { colorMap[c.tag] = c.color; });
 
-  let allJobs = [], activeFilter = 'all', activePopup = null, activeCard = null;
+  let allJobs = [], activeFilter = 'placeholder', activePopup = null, activeCard = null;
 
-  // ── Map ──────────────────────────────────────────────────────────────────
+  // ── Map ───────────────────────────────────────────────────────────────────
   const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/dark-v11',
     center: CENTER, zoom: 10, minZoom: 8, maxZoom: 19,
-    pitch: 0, bearing: 0
+    pitch: 0
   });
   map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right');
 
-  // ── Locate me ─────────────────────────────────────────────────────────────
-  document.getElementById('locate-btn').addEventListener('click', () => {
-    const btn = document.getElementById('locate-btn');
-    if (!navigator.geolocation) { alert('Geolocation not supported by your browser.'); return; }
-    btn.classList.add('locating');
-    btn.textContent = 'Locating…';
-    navigator.geolocation.getCurrentPosition(pos => {
-      CENTER = [pos.coords.longitude, pos.coords.latitude];
-      map.flyTo({ center: CENTER, zoom: 12, pitch: 45, duration: 1400 });
-      updateCircle();
-      btn.classList.remove('locating');
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.4"/></svg> Located`;
-      btn.style.color = '#fff';
-    }, () => {
-      btn.classList.remove('locating');
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.4"/></svg> Locate me`;
-    });
-  });
+  // ── Vignette tied to radius ───────────────────────────────────────────────
+  function updateVignette() {
+    const mapEl = document.getElementById('map-wrap');
+    const W = mapEl.offsetWidth, H = mapEl.offsetHeight;
 
-  // ── Circle ───────────────────────────────────────────────────────────────
+    // Project center + one radius-edge point to screen
+    const centerPx = map.project(CENTER);
+    // point due north by RADIUS miles
+    const R = 3958.8;
+    const edgeLat = CENTER[1] + (RADIUS / R) * (180 / Math.PI);
+    const edgePx  = map.project([CENTER[0], edgeLat]);
+
+    // Radius in pixels
+    const radiusPx = Math.abs(centerPx.y - edgePx.y);
+
+    // Center offset as % of map container
+    const cx = ((centerPx.x / W) * 100).toFixed(1);
+    const cy = ((centerPx.y / H) * 100).toFixed(1);
+
+    // Radius as % of container (use smallest dimension for ellipse uniformity)
+    const rx = ((radiusPx / W) * 100).toFixed(1);
+    const ry = ((radiusPx / H) * 100).toFixed(1);
+
+    const inner  = Math.min(parseFloat(rx), parseFloat(ry));
+    const mid    = inner * 1.35;
+    const outer1 = inner * 1.65;
+
+    document.getElementById('vignette').style.background = `
+      radial-gradient(
+        ellipse ${rx}% ${ry}% at ${cx}% ${cy}%,
+        transparent ${inner.toFixed(1)}%,
+        rgba(5,5,5,0.45) ${mid.toFixed(1)}%,
+        rgba(5,5,5,0.88) ${outer1.toFixed(1)}%,
+        rgba(5,5,5,0.97) 100%
+      )
+    `;
+  }
+  map.on('move', updateVignette);
+  map.on('zoom', updateVignette);
+  map.on('resize', updateVignette);
+
+  // ── Circle ────────────────────────────────────────────────────────────────
   function makeCircle(center, radiusMiles, steps=64) {
     const coords=[], R=3958.8, lat=center[1]*Math.PI/180;
     for(let i=0;i<=steps;i++){
@@ -256,41 +330,90 @@
   }
   function updateCircle() {
     if(map.getSource('radius-circle')) map.getSource('radius-circle').setData(makeCircle(CENTER,RADIUS));
+    updateVignette();
   }
 
-  // ── Dropdown filter ───────────────────────────────────────────────────────
+  // ── Location ──────────────────────────────────────────────────────────────
+  function requestLocation() {
+    const btn = document.getElementById('locate-btn');
+    const banner = document.getElementById('location-banner');
+    banner.classList.remove('show');
+    btn.classList.add('locating');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.35"/></svg> Locating…`;
+
+    navigator.geolocation.getCurrentPosition(pos => {
+      CENTER = [pos.coords.longitude, pos.coords.latitude];
+      userLocated = true;
+      map.flyTo({ center: CENTER, zoom: 12, pitch: 45, duration: 1400 });
+      updateCircle();
+      btn.classList.remove('locating');
+      btn.classList.add('located');
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Located`;
+    }, () => {
+      btn.classList.remove('locating');
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.35"/></svg> Share location`;
+    });
+  }
+
+  document.getElementById('locate-btn').addEventListener('click', requestLocation);
+
+  // Show banner after 3s if not yet located
+  setTimeout(() => {
+    if (!userLocated) document.getElementById('location-banner').classList.add('show');
+  }, 3000);
+  // Auto-hide banner after 8s
+  setTimeout(() => document.getElementById('location-banner').classList.remove('show'), 8000);
+
+  // ── Dropdown ──────────────────────────────────────────────────────────────
   const sel = document.getElementById('category-select');
   const dot = document.getElementById('cat-dot');
   CATEGORIES.forEach(cat => {
     const opt = document.createElement('option');
     opt.value = cat.tag; opt.textContent = cat.label;
+    if(cat.tag==='placeholder') opt.disabled = true;
     sel.appendChild(opt);
   });
+  sel.value = 'placeholder';
+
   function syncDot() {
-    const cat = CATEGORIES.find(c => c.tag === sel.value) || CATEGORIES[0];
+    const cat = CATEGORIES.find(c=>c.tag===sel.value)||CATEGORIES[0];
     dot.style.background = cat.color;
   }
   syncDot();
+
   sel.addEventListener('change', () => {
     activeFilter = sel.value;
     syncDot();
+
+    // Show list section, hide pre-select
+    document.getElementById('pre-select').style.display = 'none';
+    document.getElementById('list-section').style.display = 'flex';
+    document.getElementById('list-section').style.flexDirection = 'column';
+    document.getElementById('list-section').style.overflow = 'hidden';
+    document.getElementById('list-section').style.flex = '1';
+
     renderSidebar();
     updateMapLayer();
   });
 
+  // ── Jobs ──────────────────────────────────────────────────────────────────
   function filteredJobs() {
-    return activeFilter === 'all' ? allJobs : allJobs.filter(j => j.category === activeFilter);
+    return activeFilter==='all'||activeFilter==='placeholder' ? allJobs : allJobs.filter(j=>j.category===activeFilter);
   }
 
-  // ── Sidebar render ────────────────────────────────────────────────────────
   function renderSidebar() {
     const jobs = filteredJobs();
     const list = document.getElementById('job-list');
-    document.getElementById('loading-state').style.display = 'none';
-    document.getElementById('empty-state').style.display = jobs.length===0 ? 'block':'none';
+    const loading = document.getElementById('loading-state');
+    const empty = document.getElementById('empty-state');
+
+    loading.style.display = allJobs.length===0 ? 'block' : 'none';
+    empty.style.display = allJobs.length>0 && jobs.length===0 ? 'block' : 'none';
     document.getElementById('job-count').textContent = jobs.length;
+
     list.querySelectorAll('.job-card').forEach(el=>el.remove());
-    const catInfo = tag => CATEGORIES.find(c=>c.tag===tag)||CATEGORIES[0];
+    const catInfo = tag => CATEGORIES.find(c=>c.tag===tag)||CATEGORIES[1];
+
     jobs.forEach((job,i) => {
       const cat = catInfo(job.category);
       const card = document.createElement('div');
@@ -313,7 +436,7 @@
   }
 
   function updateMapLayer() {
-    const jobs=filteredJobs();
+    const jobs = activeFilter==='placeholder' ? [] : filteredJobs();
     const geojson={type:'FeatureCollection',features:jobs.map(job=>({type:'Feature',geometry:{type:'Point',coordinates:[job.lng,job.lat]},properties:{title:job.title,company:job.company,url:job.url,category:job.category,color:colorMap[job.category]||'#00ff88'}}))};
     if(map.getSource('jobs')) map.getSource('jobs').setData(geojson);
   }
@@ -324,22 +447,21 @@
       const res=await fetch(`https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${APP_ID}&app_key=${APP_KEY}&where=Dallas,TX&results_per_page=50&distance=${RADIUS}${catParam}`);
       const data=await res.json();
       return (data.results||[]).filter(j=>j.latitude&&j.longitude).map(j=>({id:j.id,title:j.title,company:j.company?.display_name||'Unknown',url:j.redirect_url,lat:j.latitude,lng:j.longitude,category:tag==='all'?(j.category?.tag||'all'):tag}));
-    } catch(e){ console.warn('Fetch failed',tag,e); return []; }
+    } catch(e){ return []; }
   }
 
   // ── Map load ──────────────────────────────────────────────────────────────
   map.on('load', async () => {
 
-    // 3D buildings layer
+    // 3D buildings
     map.addLayer({
-      id: '3d-buildings', source: 'composite', 'source-layer': 'building',
-      filter: ['==','extrude','true'], type: 'fill-extrusion',
-      minzoom: 14,
-      paint: {
-        'fill-extrusion-color': '#1a1a2e',
-        'fill-extrusion-height': ['interpolate',['linear'],['zoom'],14,0,14.5,['get','height']],
-        'fill-extrusion-base': ['interpolate',['linear'],['zoom'],14,0,14.5,['get','min_height']],
-        'fill-extrusion-opacity': 0.75
+      id:'3d-buildings', source:'composite', 'source-layer':'building',
+      filter:['==','extrude','true'], type:'fill-extrusion', minzoom:14,
+      paint:{
+        'fill-extrusion-color':'#1a1a2e',
+        'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,14.5,['get','height']],
+        'fill-extrusion-base':['interpolate',['linear'],['zoom'],14,0,14.5,['get','min_height']],
+        'fill-extrusion-opacity':0.75
       }
     });
 
@@ -350,7 +472,6 @@
 
     // Jobs source
     map.addSource('jobs',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:48});
-
     map.addLayer({id:'clusters',type:'circle',source:'jobs',filter:['has','point_count'],paint:{'circle-color':['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],'circle-radius':['step',['get','point_count'],18,5,24,15,30],'circle-opacity':0.9,'circle-stroke-width':1.5,'circle-stroke-color':'rgba(0,255,136,0.3)'}});
     map.addLayer({id:'cluster-count',type:'symbol',source:'jobs',filter:['has','point_count'],layout:{'text-field':'{point_count_abbreviated}','text-font':['DIN Pro Bold','Arial Unicode MS Bold'],'text-size':12},paint:{'text-color':'#0a0a0a'}});
     map.addLayer({id:'unclustered-point',type:'circle',source:'jobs',filter:['!',['has','point_count']],paint:{'circle-color':['coalesce',['get','color'],'#00ff88'],'circle-radius':['interpolate',['linear'],['zoom'],13,6,16,10],'circle-stroke-width':1.5,'circle-stroke-color':'rgba(255,255,255,0.2)','circle-opacity':0.95}});
@@ -389,13 +510,16 @@
       map.setPaintProperty('radius-outline','line-opacity',0.3*fade);
     });
 
-    // Fetch jobs
-    const tagsToFetch=CATEGORIES.filter(c=>c.tag!=='all').map(c=>c.tag);
+    updateVignette();
+
+    // Prefetch all categories in background
+    const tagsToFetch=CATEGORIES.filter(c=>c.tag!=='all'&&c.tag!=='placeholder').map(c=>c.tag);
     const results=await Promise.all(tagsToFetch.map(fetchCategory));
     const seen=new Set();
     results.flat().forEach(job=>{if(!seen.has(job.id)){seen.add(job.id);allJobs.push(job);}});
-    renderSidebar();
-    updateMapLayer();
+
+    // If list is already open (user selected fast), refresh it
+    if(activeFilter!=='placeholder') { renderSidebar(); updateMapLayer(); }
   });
 </script>
 </body>
