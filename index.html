@@ -149,7 +149,24 @@
     /* ── Route line color on map ── */
     /* handled via Mapbox layer paint */
 
-    /* ── Popup ── */
+    /* ── User location marker ── */
+    .user-location-marker {
+      width: 18px; height: 18px; position: relative;
+    }
+    .user-location-marker .dot {
+      width: 14px; height: 14px; background: #00ff88; border-radius: 50%;
+      border: 2.5px solid #fff; box-shadow: 0 0 0 2px rgba(0,255,136,0.4), 0 2px 8px rgba(0,0,0,0.5);
+      position: absolute; top: 2px; left: 2px; z-index: 2;
+    }
+    .user-location-marker .pulse-ring {
+      width: 18px; height: 18px; background: rgba(0,255,136,0.35);
+      border-radius: 50%; position: absolute; top: 0; left: 0;
+      animation: locationPulse 2s infinite ease-out;
+    }
+    @keyframes locationPulse {
+      0%   { transform: scale(1);   opacity: 0.7; }
+      100% { transform: scale(3.2); opacity: 0; }
+    }
     .mapboxgl-popup-content { background:#111!important; border:1px solid rgba(0,255,136,0.25)!important; border-radius:10px!important; padding:14px 16px!important; box-shadow:0 8px 32px rgba(0,0,0,0.6)!important; min-width:200px; }
     .mapboxgl-popup-tip { display:none!important; }
     .mapboxgl-popup-close-button { color:rgba(255,255,255,0.4)!important; font-size:16px!important; top:6px!important; right:8px!important; }
@@ -291,6 +308,21 @@
   }
 
   // ── Location ──────────────────────────────────────────────────────────────
+  let userMarker = null;
+
+  function placeUserMarker(coords) {
+    if (userMarker) {
+      userMarker.setLngLat(coords);
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'user-location-marker';
+    el.innerHTML = `<div class="pulse-ring"></div><div class="dot"></div>`;
+    userMarker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+      .setLngLat(coords)
+      .addTo(map);
+  }
+
   function requestLocation() {
     if (!navigator.geolocation) return;
     const btn = document.getElementById('locate-btn');
@@ -303,6 +335,7 @@
       userLocated = true;
       map.flyTo({ center: CENTER, zoom: 13, pitch: 45, duration: 1400 });
       updateCircle();
+      placeUserMarker(CENTER);
       btn.classList.remove('locating');
       btn.classList.add('located');
       btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Located (±${accuracy}m)`;
