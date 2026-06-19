@@ -28,13 +28,555 @@
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     #map { position: absolute; inset: 0; }
 
-    /* ── Vignette: inset box-shadow — never touches map canvas ── */
+    /* ── Vignette: soft radial-gradient fade, fixed to viewport — never tracks the map ── */
     #vignette {
       position: absolute; inset: 0; z-index: 2;
       pointer-events: none;
-      box-shadow: inset 0 0 120px 60px rgba(5,5,5,0.92);
-      border-radius: 0;
+      background: radial-gradient(
+        ellipse 75% 75% at 50% 50%,
+        rgba(5,5,5,0) 0%,
+        rgba(5,5,5,0) 45%,
+        rgba(5,5,5,0.35) 70%,
+        rgba(5,5,5,0.75) 88%,
+        rgba(5,5,5,0.92) 100%
+      );
     }
+
+    /* ── Sidebar header ── */
+    #sidebar-header {
+      padding: 16px 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .logo { font-size: 15px; font-weight: 800; color: #00ff88; letter-spacing: 0.05em; }
+    .tagline { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+    #locate-btn {
+      display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+      color: #00ff88; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.25);
+      border-radius: 8px; padding: 6px 10px; cursor: pointer; transition: all 0.18s;
+      white-space: nowrap; flex-shrink: 0; font-family: inherit;
+    }
+    #locate-btn:hover { background: rgba(0,255,136,0.16); }
+    #locate-btn.located { color: #fff; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); }
+    #locate-btn.locating { opacity: 0.5; pointer-events: none; }
+    #locate-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* ── Filter ── */
+    #filter-wrap { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+    #filter-select-wrap { position: relative; display: flex; align-items: center; }
+    #cat-dot { position: absolute; left: 10px; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; transition: background 0.2s; z-index: 1; }
+    #filter-select-wrap::after { content: '▾'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); font-size: 11px; pointer-events: none; }
+    #category-select {
+      width: 100%; appearance: none; -webkit-appearance: none;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; padding: 9px 28px 9px 26px; color: #fff; font-size: 12px;
+      font-weight: 600; cursor: pointer; outline: none; font-family: inherit;
+    }
+    #category-select:focus { border-color: rgba(0,255,136,0.4); }
+    #category-select option { background: #1a1a1a; color: #fff; }
+
+    /* ── Commute panel ── */
+    #commute-panel {
+      flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: #0c0c0c; display: none; flex-direction: column; padding: 12px 14px; gap: 10px;
+    }
+    #commute-panel.visible { display: flex; }
+    #commute-job-title { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; }
+    #commute-job-company { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    #commute-modes { display: flex; gap: 8px; }
+    .commute-mode {
+      flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px; padding: 8px 6px; text-align: center; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .commute-mode:hover { background: rgba(255,255,255,0.08); }
+    .commute-mode.active { border-color: rgba(0,255,136,0.5); background: rgba(0,255,136,0.08); }
+    .commute-mode .mode-icon { font-size: 16px; margin-bottom: 3px; }
+    .commute-mode .mode-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.04em; text-transform: uppercase; }
+    .commute-mode .mode-time { font-size: 13px; font-weight: 700; color: #fff; margin-top: 2px; }
+    .commute-mode .mode-time.loading { color: rgba(255,255,255,0.3); font-size: 11px; }
+    #traffic-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; padding: 3px 9px; border-radius: 10px; font-weight: 600;
+      align-self: flex-start;
+    }
+    #traffic-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+    #traffic-badge.clear { background: rgba(0,255,136,0.12); color: #00ff88; }
+    #traffic-badge.clear .dot { background: #00ff88; }
+    #traffic-badge.moderate { background: rgba(255,193,7,0.15); color: #ffc107; }
+    #traffic-badge.moderate .dot { background: #ffc107; }
+    #traffic-badge.heavy { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+    #traffic-badge.heavy .dot { background: #ff6b6b; }
+    #commute-close { position: absolute; right: 12px; top: 12px; background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 16px; padding: 2px; }
+
+    /* ── List section ── */
+    #list-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #count-bar { padding: 8px 14px 6px; font-size: 11px; color: rgba(255,255,255,0.35); flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    #count-bar strong { color: #fff; font-weight: 700; }
+    #job-list { flex: 1; overflow-y: auto; padding: 8px; }
+    #job-list::-webkit-scrollbar { width: 3px; }
+    #job-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    /* ── Pre-select prompt ── */
+    #pre-select { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; text-align: center; gap: 12px; }
+    .ps-icon { font-size: 28px; opacity: 0.4; }
+    .ps-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.6); }
+    .ps-sub { font-size: 11px; color: rgba(255,255,255,0.25); line-height: 1.6; }
+
+    .job-card {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 11px 13px; margin-bottom: 6px;
+      cursor: pointer; transition: all 0.15s; border-left: 3px solid;
+    }
+    .job-card:hover { background: rgba(255,255,255,0.06); transform: translateX(2px); }
+    .job-card.active { background: rgba(255,255,255,0.08); }
+    .card-title { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 3px; line-height: 1.35; }
+    .card-company { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .card-cat { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.06); }
+    .card-apply { font-size: 10px; font-weight: 700; color: #00ff88; text-decoration: none; }
+    .card-apply:hover { text-decoration: underline; }
+    #empty-state { text-align:center; padding:32px 20px; color:rgba(255,255,255,0.25); font-size:12px; line-height:1.6; display:none; }
+    #loading-state { text-align:center; padding:32px 20px; color:rgba(255,255,255,0.3); font-size:12px; display:none; }
+    .pulse { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:0.3}50%{opacity:0.8} }
+
+    /* ── Map overlays ── */
+    #zoom-hint { position:absolute; bottom:28px; right:12px; z-index:6; background:rgba(10,10,10,0.7); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:5px 10px; color:rgba(255,255,255,0.3); font-size:11px; transition:opacity 0.4s; pointer-events:none; }
+    #location-banner { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); z-index:8; background:rgba(15,15,15,0.92); border:1px solid rgba(0,255,136,0.3); border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(255,255,255,0.7); white-space:nowrap; box-shadow:0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:opacity 0.4s; }
+    #location-banner.show { opacity:1; pointer-events:auto; }
+    #location-banner button { font-size:11px; font-weight:700; color:#0a0a0a; background:#00ff88; border:none; border-radius:6px; padding:4px 10px; cursor:pointer; font-family:inherit; }
+
+    /* ── Route line color on map ── */
+    /* handled via Mapbox layer paint */
+
+    /* ── Popup ── */
+    .mapboxgl-popup-content { background:#111!important; border:1px solid rgba(0,255,136,0.25)!important; border-radius:10px!important; padding:14px 16px!important; box-shadow:0 8px 32px rgba(0,0,0,0.6)!important; min-width:200px; }
+    .mapboxgl-popup-tip { display:none!important; }
+    .mapboxgl-popup-close-button { color:rgba(255,255,255,0.4)!important; font-size:16px!important; top:6px!important; right:8px!important; }
+    .popup-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:4px; line-height:1.3; padding-right:16px; }
+    .popup-company { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:10px; }
+    .popup-apply { display:inline-block; font-size:12px; font-weight:600; color:#0a0a0a; background:#00ff88; border-radius:6px; padding:5px 12px; text-decoration:none; }
+
+    @media (max-width:640px) {
+      #app { flex-direction:column; }
+      #sidebar { width:100%; min-width:unset; height:auto; max-height:50dvh; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); }
+      #map-wrap { flex:1; min-height:0; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div>
+        <div class="logo">Labor Network</div>
+        <div class="tagline">Hyperlocal jobs · DFW</div>
+      </div>
+      <button id="locate-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          <circle cx="12" cy="12" r="8" stroke-opacity="0.35"/>
+        </svg>
+        Share location
+      </button>
+    </div>
+
+    <div id="filter-wrap">
+      <div id="filter-select-wrap">
+        <span id="cat-dot"></span>
+        <select id="category-select"></select>
+      </div>
+    </div>
+
+    <!-- Commute panel — shown when a job is focused -->
+    <div id="commute-panel" style="position:relative">
+      <button id="commute-close" onclick="closeCommute()">✕</button>
+      <div>
+        <div id="commute-job-title">—</div>
+        <div id="commute-job-company"></div>
+      </div>
+      <div id="commute-modes">
+        <div class="commute-mode active" id="mode-driving" onclick="selectMode('driving')">
+          <div class="mode-icon">🚗</div>
+          <div class="mode-label">Drive</div>
+          <div class="mode-time loading" id="time-driving">—</div>
+        </div>
+        <div class="commute-mode" id="mode-walking" onclick="selectMode('walking')">
+          <div class="mode-icon">🚶</div>
+          <div class="mode-label">Walk</div>
+          <div class="mode-time loading" id="time-walking">—</div>
+        </div>
+        <div class="commute-mode" id="mode-cycling" onclick="selectMode('cycling')">
+          <div class="mode-icon">🚲</div>
+          <div class="mode-label">Bike</div>
+          <div class="mode-time loading" id="time-cycling">—</div>
+        </div>
+      </div>
+      <div id="traffic-badge" class="clear"><span class="dot"></span><span id="traffic-label">Checking traffic…</span></div>
+    </div>
+
+    <div id="list-section" style="display:none">
+      <div id="count-bar"><strong id="job-count">—</strong> jobs found</div>
+      <div id="job-list">
+        <div id="loading-state" class="pulse">Loading…</div>
+        <div id="empty-state">No jobs in this category nearby.<br>Try another filter.</div>
+      </div>
+    </div>
+
+    <div id="pre-select">
+      <div class="ps-icon">📍</div>
+      <div class="ps-title">Choose a job category</div>
+      <div class="ps-sub">Select an industry above to see<br>openings on the map near you.</div>
+    </div>
+  </div>
+
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="vignette"></div>
+    <div id="zoom-hint">Zoom in to explore your neighborhood →</div>
+    <div id="location-banner">
+      📍 Share your location for a tighter radius
+      <button onclick="requestLocation()">Allow</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  mapboxgl.accessToken = 'pk.eyJ1IjoiY29yZXlkZXZkZnciLCJhIjoiY21xaHVvanM2MDE3bDJ0cHB4NTF4andpdiJ9.7zXPq8gI54J5-OEEh69E5w';
+  const APP_ID  = 'b7919541';
+  const APP_KEY = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
+  let CENTER    = [-96.7970, 33.0137];
+  let userLocated = false;
+  const RADIUS  = 25;
+  let currentJob = null;
+  let activeMode = 'driving';
+
+  const CATEGORIES = [
+    { tag:'placeholder',              label:'Select a category…',    color:'#555' },
+    { tag:'all',                      label:'All Categories',         color:'#00ff88' },
+    { tag:'logistics-warehouse-jobs', label:'Warehouse & Logistics',  color:'#ff9f43' },
+    { tag:'manufacturing-jobs',       label:'Manufacturing',          color:'#54a0ff' },
+    { tag:'trade-construction-jobs',  label:'Trades & Construction',  color:'#ffd32a' },
+    { tag:'retail-jobs',              label:'Retail',                 color:'#c56cf0' },
+    { tag:'customer-services-jobs',   label:'Customer Service',       color:'#ff6b81' },
+    { tag:'engineering-jobs',         label:'Engineering',            color:'#0be881' },
+    { tag:'admin-jobs',               label:'Admin & Office',         color:'#67e8f9' },
+  ];
+  const colorMap = {};
+  CATEGORIES.forEach(c => { colorMap[c.tag] = c.color; });
+
+  let allJobs = [], activeFilter = 'placeholder', activePopup = null, activeCard = null;
+
+  // ── Map ───────────────────────────────────────────────────────────────────
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: CENTER, zoom: 10, minZoom: 8, maxZoom: 19, pitch: 0
+  });
+  map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right');
+
+
+
+  // ── Circle ────────────────────────────────────────────────────────────────
+  function makeCircle(center, radiusMiles, steps=64) {
+    const coords=[], R=3958.8, lat=center[1]*Math.PI/180;
+    for(let i=0;i<=steps;i++){
+      const a=(i/steps)*2*Math.PI;
+      coords.push([center[0]+(radiusMiles/R)*Math.sin(a)/Math.cos(lat)*180/Math.PI, center[1]+(radiusMiles/R)*Math.cos(a)*180/Math.PI]);
+    }
+    return {type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'Polygon',coordinates:[coords]}}]};
+  }
+  function updateCircle() {
+    if(map.getSource('radius-circle')) map.getSource('radius-circle').setData(makeCircle(CENTER,RADIUS));
+  }
+
+  // ── Location ──────────────────────────────────────────────────────────────
+  function requestLocation() {
+    if (!navigator.geolocation) return;
+    const btn = document.getElementById('locate-btn');
+    document.getElementById('location-banner').classList.remove('show');
+    btn.classList.add('locating');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Locating…`;
+    navigator.geolocation.getCurrentPosition(pos => {
+      CENTER = [pos.coords.longitude, pos.coords.latitude];
+      userLocated = true;
+      map.flyTo({ center: CENTER, zoom: 12, pitch: 45, duration: 1400 });
+      updateCircle();
+      btn.classList.remove('locating');
+      btn.classList.add('located');
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Located`;
+    }, () => {
+      btn.classList.remove('locating');
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.35"/></svg> Share location`;
+    });
+  }
+  document.getElementById('locate-btn').addEventListener('click', requestLocation);
+  setTimeout(()=>{ if(!userLocated) document.getElementById('location-banner').classList.add('show'); }, 3000);
+  setTimeout(()=>document.getElementById('location-banner').classList.remove('show'), 9000);
+
+  // ── Commute / Directions ──────────────────────────────────────────────────
+  let routeCache = {};
+
+  async function fetchRoute(mode, destination) {
+    const key = `${mode}|${destination[0]},${destination[1]}`;
+    if (routeCache[key]) return routeCache[key];
+
+    const profile = mode === 'cycling' ? 'cycling' : mode === 'walking' ? 'walking' : 'driving-traffic';
+    const origin = CENTER;
+    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${origin[0]},${origin[1]};${destination[0]},${destination[1]}?access_token=${mapboxgl.accessToken}&geometries=geojson&overview=full&annotations=congestion`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.routes || !data.routes.length) return null;
+      const route = data.routes[0];
+      routeCache[key] = route;
+      return route;
+    } catch(e) { return null; }
+  }
+
+  function formatTime(seconds) {
+    if (!seconds) return '—';
+    const mins = Math.round(seconds / 60);
+    if (mins < 60) return `${mins} min`;
+    return `${Math.floor(mins/60)}h ${mins%60}m`;
+  }
+
+  function trafficFromCongestion(legs) {
+    if (!legs || !legs[0] || !legs[0].annotation || !legs[0].annotation.congestion) return 'clear';
+    const cong = legs[0].annotation.congestion;
+    const counts = { low:0, moderate:0, heavy:0, severe:0 };
+    cong.forEach(c => { if(counts[c]!==undefined) counts[c]++; });
+    const total = cong.length || 1;
+    if ((counts.heavy + counts.severe) / total > 0.2) return 'heavy';
+    if ((counts.moderate + counts.heavy + counts.severe) / total > 0.3) return 'moderate';
+    return 'clear';
+  }
+
+  const trafficLabels = { clear: '🟢 Traffic clear', moderate: '🟡 Moderate traffic', heavy: '🔴 Heavy traffic' };
+
+  async function loadCommute(job) {
+    currentJob = job;
+    document.getElementById('commute-job-title').textContent = job.title;
+    document.getElementById('commute-job-company').textContent = job.company;
+    document.getElementById('commute-panel').classList.add('visible');
+
+    // Reset times
+    ['driving','walking','cycling'].forEach(m => {
+      const el = document.getElementById(`time-${m}`);
+      el.textContent = '…'; el.className = 'mode-time loading';
+    });
+    document.getElementById('traffic-label').textContent = 'Checking traffic…';
+
+    const dest = [job.lng, job.lat];
+
+    // Fetch all three modes
+    const [driveRoute, walkRoute, bikeRoute] = await Promise.all([
+      fetchRoute('driving', dest),
+      fetchRoute('walking', dest),
+      fetchRoute('cycling', dest)
+    ]);
+
+    if (driveRoute) {
+      const el = document.getElementById('time-driving');
+      el.textContent = formatTime(driveRoute.duration);
+      el.className = 'mode-time';
+
+      // Traffic from driving route
+      const trafficLevel = trafficFromCongestion(driveRoute.legs);
+      const badge = document.getElementById('traffic-badge');
+      badge.className = `traffic-badge ${trafficLevel}`;
+      document.getElementById('traffic-label').textContent = trafficLabels[trafficLevel];
+    }
+    if (walkRoute) {
+      const el = document.getElementById('time-walking');
+      el.textContent = formatTime(walkRoute.duration);
+      el.className = 'mode-time';
+    }
+    if (bikeRoute) {
+      const el = document.getElementById('time-cycling');
+      el.textContent = formatTime(bikeRoute.duration);
+      el.className = 'mode-time';
+    }
+
+    // Draw active mode route
+    drawRoute(activeMode, dest);
+  }
+
+  async function drawRoute(mode, dest) {
+    const route = await fetchRoute(mode, dest || (currentJob ? [currentJob.lng, currentJob.lat] : null));
+    if (!route) return;
+
+    const geojson = { type:'Feature', geometry: route.geometry };
+
+    if (map.getSource('route')) {
+      map.getSource('route').setData(geojson);
+    } else {
+      map.addSource('route', { type:'geojson', data: geojson });
+      map.addLayer({
+        id: 'route-line', type: 'line', source: 'route',
+        layout: { 'line-join':'round', 'line-cap':'round' },
+        paint: { 'line-color': '#00ff88', 'line-width': 3.5, 'line-opacity': 0.85 }
+      }, 'unclustered-point');
+      map.addLayer({
+        id: 'route-line-glow', type:'line', source:'route',
+        layout: { 'line-join':'round', 'line-cap':'round' },
+        paint: { 'line-color':'#00ff88', 'line-width':8, 'line-opacity':0.12 }
+      }, 'route-line');
+    }
+  }
+
+  function selectMode(mode) {
+    activeMode = mode;
+    document.querySelectorAll('.commute-mode').forEach(el => el.classList.remove('active'));
+    document.getElementById(`mode-${mode}`).classList.add('active');
+    if (currentJob) drawRoute(mode, [currentJob.lng, currentJob.lat]);
+  }
+
+  function closeCommute() {
+    document.getElementById('commute-panel').classList.remove('visible');
+    currentJob = null;
+    if (map.getLayer('route-line')) map.removeLayer('route-line');
+    if (map.getLayer('route-line-glow')) map.removeLayer('route-line-glow');
+    if (map.getSource('route')) map.removeSource('route');
+    if (activePopup) { activePopup.remove(); activePopup = null; }
+  }
+
+  // ── Dropdown ──────────────────────────────────────────────────────────────
+  const sel = document.getElementById('category-select');
+  const dot = document.getElementById('cat-dot');
+  CATEGORIES.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat.tag; opt.textContent = cat.label;
+    if(cat.tag==='placeholder') opt.disabled = true;
+    sel.appendChild(opt);
+  });
+  sel.value = 'placeholder';
+  function syncDot() {
+    const cat = CATEGORIES.find(c=>c.tag===sel.value)||CATEGORIES[0];
+    dot.style.background = cat.color;
+  }
+  syncDot();
+  sel.addEventListener('change', () => {
+    activeFilter = sel.value;
+    syncDot();
+    document.getElementById('pre-select').style.display = 'none';
+    const ls = document.getElementById('list-section');
+    ls.style.display = 'flex'; ls.style.flexDirection = 'column'; ls.style.overflow = 'hidden'; ls.style.flex = '1';
+    renderSidebar(); updateMapLayer();
+  });
+
+  // ── Sidebar ───────────────────────────────────────────────────────────────
+  function filteredJobs() {
+    return (activeFilter==='all'||activeFilter==='placeholder') ? allJobs : allJobs.filter(j=>j.category===activeFilter);
+  }
+
+  function renderSidebar() {
+    const jobs = filteredJobs();
+    const list = document.getElementById('job-list');
+    document.getElementById('loading-state').style.display = allJobs.length===0 ? 'block':'none';
+    document.getElementById('empty-state').style.display = allJobs.length>0&&jobs.length===0 ? 'block':'none';
+    document.getElementById('job-count').textContent = jobs.length;
+    list.querySelectorAll('.job-card').forEach(el=>el.remove());
+    const catInfo = tag => CATEGORIES.find(c=>c.tag===tag)||CATEGORIES[1];
+    jobs.forEach((job,i) => {
+      const cat = catInfo(job.category);
+      const card = document.createElement('div');
+      card.className='job-card'; card.dataset.index=i; card.style.borderLeftColor=cat.color;
+      card.innerHTML=`<div class="card-title">${job.title}</div><div class="card-company">${job.company}</div><div class="card-footer"><span class="card-cat" style="color:${cat.color}">${cat.label}</span><a class="card-apply" href="${job.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Apply →</a></div>`;
+      card.addEventListener('click',()=>focusJob(job,card));
+      list.appendChild(card);
+    });
+  }
+
+  function focusJob(job, card) {
+    if(activeCard) activeCard.classList.remove('active');
+    card.classList.add('active'); activeCard = card;
+    if(activePopup) activePopup.remove();
+    map.flyTo({ center:[job.lng,job.lat], zoom:Math.max(map.getZoom(),15), pitch:50, duration:800 });
+    activePopup = new mapboxgl.Popup({closeButton:true,maxWidth:'260px'})
+      .setLngLat([job.lng,job.lat])
+      .setHTML(`<div class="popup-title">${job.title}</div><div class="popup-company">${job.company}</div><a class="popup-apply" href="${job.url}" target="_blank" rel="noopener">View & Apply →</a>`)
+      .addTo(map);
+    loadCommute(job);
+  }
+
+  function updateMapLayer() {
+    const jobs = activeFilter==='placeholder' ? [] : filteredJobs();
+    const geojson={type:'FeatureCollection',features:jobs.map(job=>({type:'Feature',geometry:{type:'Point',coordinates:[job.lng,job.lat]},properties:{title:job.title,company:job.company,url:job.url,category:job.category,color:colorMap[job.category]||'#00ff88'}}))};
+    if(map.getSource('jobs')) map.getSource('jobs').setData(geojson);
+  }
+
+  async function fetchCategory(tag) {
+    const catParam=(tag==='all')?'':`&category=${tag}`;
+    try {
+      const res=await fetch(`https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${APP_ID}&app_key=${APP_KEY}&where=Dallas,TX&results_per_page=50&distance=${RADIUS}${catParam}`);
+      const data=await res.json();
+      return (data.results||[]).filter(j=>j.latitude&&j.longitude).map(j=>({id:j.id,title:j.title,company:j.company?.display_name||'Unknown',url:j.redirect_url,lat:j.latitude,lng:j.longitude,category:tag==='all'?(j.category?.tag||'all'):tag}));
+    } catch(e){ return []; }
+  }
+
+  // ── Map load ──────────────────────────────────────────────────────────────
+  map.on('load', async () => {
+
+    // 3D buildings
+    map.addLayer({ id:'3d-buildings', source:'composite', 'source-layer':'building', filter:['==','extrude','true'], type:'fill-extrusion', minzoom:14,
+      paint:{ 'fill-extrusion-color':'#1a1a2e', 'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,14.5,['get','height']], 'fill-extrusion-base':['interpolate',['linear'],['zoom'],14,0,14.5,['get','min_height']], 'fill-extrusion-opacity':0.75 }
+    });
+
+    // Radius circle
+    map.addSource('radius-circle',{type:'geojson',data:makeCircle(CENTER,RADIUS)});
+    map.addLayer({id:'radius-fill',type:'fill',source:'radius-circle',paint:{'fill-color':'#00ff88','fill-opacity':0.03}});
+    map.addLayer({id:'radius-outline',type:'line',source:'radius-circle',paint:{'line-color':'#00ff88','line-width':1.5,'line-opacity':0.3,'line-dasharray':[4,3]}});
+
+    // Jobs
+    map.addSource('jobs',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:48});
+    map.addLayer({id:'clusters',type:'circle',source:'jobs',filter:['has','point_count'],paint:{'circle-color':['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],'circle-radius':['step',['get','point_count'],18,5,24,15,30],'circle-opacity':0.9,'circle-stroke-width':1.5,'circle-stroke-color':'rgba(0,255,136,0.3)'}});
+    map.addLayer({id:'cluster-count',type:'symbol',source:'jobs',filter:['has','point_count'],layout:{'text-field':'{point_count_abbreviated}','text-font':['DIN Pro Bold','Arial Unicode MS Bold'],'text-size':12},paint:{'text-color':'#0a0a0a'}});
+    map.addLayer({id:'unclustered-point',type:'circle',source:'jobs',filter:['!',['has','point_count']],paint:{'circle-color':['coalesce',['get','color'],'#00ff88'],'circle-radius':['interpolate',['linear'],['zoom'],13,6,16,10],'circle-stroke-width':1.5,'circle-stroke-color':'rgba(255,255,255,0.2)','circle-opacity':0.95}});
+
+    map.on('click','clusters',e=>{
+      const f=map.queryRenderedFeatures(e.point,{layers:['clusters']});
+      map.getSource('jobs').getClusterExpansionZoom(f[0].properties.cluster_id,(err,zoom)=>{if(!err)map.easeTo({center:f[0].geometry.coordinates,zoom,duration:500});});
+    });
+
+    map.on('click','unclustered-point',e=>{
+      const{title,company,url}=e.features[0].properties;
+      const coords=e.features[0].geometry.coordinates.slice();
+      if(activePopup) activePopup.remove();
+      activePopup=new mapboxgl.Popup({closeButton:true,maxWidth:'260px'}).setLngLat(coords).setHTML(`<div class="popup-title">${title}</div><div class="popup-company">${company}</div><a class="popup-apply" href="${url}" target="_blank" rel="noopener">View & Apply →</a>`).addTo(map);
+      map.flyTo({center:coords,zoom:Math.max(map.getZoom(),15),pitch:50,duration:700});
+      const jobs=filteredJobs();
+      const idx=jobs.findIndex(j=>j.title===title&&j.company===company);
+      if(idx>=0){
+        const card=document.querySelector(`.job-card[data-index="${idx}"]`);
+        if(card){if(activeCard)activeCard.classList.remove('active');card.classList.add('active');activeCard=card;card.scrollIntoView({behavior:'smooth',block:'nearest'});}
+        loadCommute(jobs[idx]);
+      }
+    });
+
+    map.on('mouseenter','clusters',()=>map.getCanvas().style.cursor='pointer');
+    map.on('mouseleave','clusters',()=>map.getCanvas().style.cursor='');
+    map.on('mouseenter','unclustered-point',()=>map.getCanvas().style.cursor='pointer');
+    map.on('mouseleave','unclustered-point',()=>map.getCanvas().style.cursor='');
+
+    map.on('zoom',()=>{
+      const z=map.getZoom();
+      document.getElementById('zoom-hint').style.opacity=z>12?'0':'1';
+      const fade=Math.max(0,Math.min(1,(14-z)/2));
+      map.setPaintProperty('radius-fill','fill-opacity',0.03*fade);
+      map.setPaintProperty('radius-outline','line-opacity',0.3*fade);
+    });
+
+=CATEGORIES.filter(c=>c.tag!=='all'&&c.tag!=='placeholder').map(c=>c.tag);
+    const results=await Promise.all(tagsToFetch.map(fetchCategory));
+    const seen=new Set();
+    results.flat().forEach(job=>{if(!seen.has(job.id)){seen.add(job.id);allJobs.push(job);}});
+    if(activeFilter!=='placeholder'){ renderSidebar(); updateMapLayer(); }
+  });
+</script>
+</body>
+</html>    }
 
     /* ── Sidebar header ── */
     #sidebar-header {
