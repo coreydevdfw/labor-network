@@ -180,32 +180,37 @@
 
     /* ── 3D animated job pin marker (DOM-based, synced to unclustered points only) ── */
     .job-pin-3d {
-      width: 28px; height: 36px; position: relative; cursor: pointer;
+      width: 32px; height: 40px; position: relative; cursor: pointer;
       transform-origin: bottom center;
       animation: pin3dDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, pin3dBob 2.4s ease-in-out 0.4s infinite;
     }
     .job-pin-3d .pin3d-body {
-      width: 24px; height: 24px; border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg); position: absolute; top: 1px; left: 2px;
-      box-shadow: 0 3px 7px rgba(0,0,0,0.55), inset 0 -3px 5px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
+      width: 27px; height: 27px; border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg); position: absolute; top: 1px; left: 2.5px;
+      border: 1.5px solid rgba(255,255,255,0.85);
+      box-shadow: 0 4px 9px rgba(0,0,0,0.6), inset 0 -4px 6px rgba(0,0,0,0.35), inset 0 2px 5px rgba(255,255,255,0.55);
       display: flex; align-items: center; justify-content: center;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     .job-pin-3d .pin3d-emoji {
-      transform: rotate(45deg); font-size: 11px; line-height: 1; user-select: none;
+      transform: rotate(45deg); font-size: 14px; line-height: 1; user-select: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
     }
     .job-pin-3d .pin3d-shadow {
       position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
-      width: 13px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%;
-      filter: blur(1.5px);
+      width: 15px; height: 5px; background: rgba(0,0,0,0.45); border-radius: 50%;
+      filter: blur(2px);
     }
     .job-pin-3d:hover .pin3d-body {
-      transform: rotate(-45deg) scale(1.2) translateY(-2px);
-      box-shadow: 0 5px 10px rgba(0,0,0,0.6), inset 0 -3px 5px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.45);
+      transform: rotate(-45deg) scale(1.22) translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.65), inset 0 -4px 6px rgba(0,0,0,0.35), inset 0 2px 5px rgba(255,255,255,0.6);
+      border-color: #fff;
     }
     @keyframes pin3dDrop {
-      0%   { transform: translateY(-24px) scale(0.4); opacity: 0; }
-      65%  { transform: translateY(2px) scale(1.08); opacity: 1; }
+      0%   { transform: translateY(-26px) scale(0.4); opacity: 0; }
+      65%  { transform: translateY(2px) scale(1.1); opacity: 1; }
       100% { transform: translateY(0) scale(1); opacity: 1; }
     }
     @keyframes pin3dBob {
@@ -692,13 +697,39 @@
 
     const activeKeys = new Set();
 
+    // Always keep the currently-focused job's pin alive, even if queryRenderedFeatures
+    // momentarily misses it during a flyTo/pitch transition (tilted camera + tight zoom
+    // can push the point just outside the queried render bounds).
+    if (currentJob) {
+      const fkey = `${currentJob.lng.toFixed(6)},${currentJob.lat.toFixed(6)}`;
+      activeKeys.add(fkey);
+      if (!jobPinMarkers[fkey]) {
+        addJobPinMarker(currentJob.lng, currentJob.lat, {
+          title: currentJob.title, company: currentJob.company,
+          url: currentJob.url, category: currentJob.category,
+          color: colorMap[currentJob.category] || '#00ff88'
+        }, fkey);
+      }
+    }
+
     rendered.forEach(f => {
       const [lng, lat] = f.geometry.coordinates;
       const key = `${lng.toFixed(6)},${lat.toFixed(6)}`;
       activeKeys.add(key);
       if (jobPinMarkers[key]) return; // already rendered
+      addJobPinMarker(lng, lat, f.properties, key);
+    });
 
-      const props = f.properties;
+    // Remove markers for points no longer rendered (clustered away or filtered out)
+    Object.keys(jobPinMarkers).forEach(key => {
+      if (!activeKeys.has(key)) {
+        jobPinMarkers[key].remove();
+        delete jobPinMarkers[key];
+      }
+    });
+  }
+
+  function addJobPinMarker(lng, lat, props, key) {
       const el = document.createElement('div');
       el.className = 'job-pin-3d';
       el.innerHTML = `
@@ -727,15 +758,6 @@
         .setLngLat([lng, lat])
         .addTo(map);
       jobPinMarkers[key] = marker;
-    });
-
-    // Remove markers for points no longer rendered (clustered away or filtered out)
-    Object.keys(jobPinMarkers).forEach(key => {
-      if (!activeKeys.has(key)) {
-        jobPinMarkers[key].remove();
-        delete jobPinMarkers[key];
-      }
-    });
   }
 
   async function fetchCategory(tag) {
