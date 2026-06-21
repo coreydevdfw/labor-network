@@ -164,6 +164,15 @@
 
     /* ── Map overlays ── */
     #zoom-hint { position:absolute; bottom:28px; right:12px; z-index:6; background:rgba(10,10,10,0.7); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:5px 10px; color:rgba(255,255,255,0.3); font-size:11px; transition:opacity 0.4s; pointer-events:none; }
+    #heatmap-caption {
+      position:absolute; bottom:28px; left:12px; z-index:6;
+      background:rgba(10,10,10,0.75); border:1px solid rgba(255,107,107,0.25);
+      border-radius:8px; padding:7px 11px; color:rgba(255,255,255,0.55);
+      font-size:11px; line-height:1.4; max-width:200px;
+      opacity:0; pointer-events:none; transition:opacity 0.3s;
+    }
+    #heatmap-caption.show { opacity:1; }
+    #heatmap-caption strong { color:#fff; }
     #location-banner { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); z-index:8; background:rgba(15,15,15,0.95); border:1px solid rgba(0,255,136,0.3); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(255,255,255,0.7); box-shadow:0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:opacity 0.4s; max-width: calc(100vw - 24px); width: max-content; }
     #location-banner.show { opacity:1; pointer-events:auto; }
     #location-banner button { font-size:11px; font-weight:700; color:#0a0a0a; background:#00ff88; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-family:inherit; flex-shrink: 0; }
@@ -278,9 +287,11 @@
       <div id="view-toggle">
         <button id="toggle-pins" class="active" title="Pin view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 1114 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          Pins
         </button>
-        <button id="toggle-heatmap" title="Hiring heatmap">
+        <button id="toggle-heatmap" title="Hot zones — where the most openings are clustered">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8 6 6 9 6 13a6 6 0 1012 0c0-4-2-7-6-11z"/></svg>
+          Hot zones
         </button>
       </div>
     </div>
@@ -331,6 +342,7 @@
     <div id="map"></div>
     <div id="vignette"></div>
     <div id="zoom-hint">Zoom in to explore your neighborhood →</div>
+    <div id="heatmap-caption"><strong>Hot zones</strong> show where the most current openings are clustered right now — a good signal for where to focus your search, not a historical hiring trend.</div>
     <div id="location-banner">
       📍 Share your location for a tighter radius
       <button onclick="requestLocation()">Allow</button>
@@ -339,6 +351,19 @@
 </div>
 
 <script>
+  /*
+    ── BACKLOG / NEXT ITERATION NOTES ──────────────────────────────────────
+    - Add ZIP code entry as an alternate location input. Must be purely
+      additive — it should NOT interfere with or override the existing
+      GPS "Share location" flow. ZIP should only set CENTER if the user
+      has NOT already granted live geolocation (userLocated === false),
+      or be offered as an explicit separate "search a different area"
+      option distinct from "my current location."
+    - Wire in Jooble as second job source once JOOBLE_KEY is populated.
+    - USPTO TESS check still pending on any shortlisted brand name before
+      committing to wordmark/logo direction.
+  ──────────────────────────────────────────────────────────────────────── */
+
   mapboxgl.accessToken = 'pk.eyJ1IjoiY29yZXlkZXZkZnciLCJhIjoiY21xaHVvanM2MDE3bDJ0cHB4NTF4andpdiJ9.7zXPq8gI54J5-OEEh69E5w';
   const APP_ID  = 'b7919541';
   const APP_KEY = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
@@ -620,6 +645,7 @@
     viewMode = mode;
     pinsBtn.classList.toggle('active', mode === 'pins');
     heatBtn.classList.toggle('active', mode === 'heatmap');
+    document.getElementById('heatmap-caption').classList.toggle('show', mode === 'heatmap');
     if (!map.getLayer('jobs-heat')) return;
     const pinVis = mode === 'pins' ? 'visible' : 'none';
     const heatVis = mode === 'heatmap' ? 'visible' : 'none';
