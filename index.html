@@ -43,12 +43,43 @@
     }
 
     /* ── Sidebar header ── */
+    #sidebar-header-wrap { flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
     #sidebar-header {
-      padding: 16px 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
-      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 16px 14px 10px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
     .logo { font-size: 15px; font-weight: 800; color: #00ff88; letter-spacing: 0.05em; }
     .tagline { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+
+    #zip-row { padding: 0 14px 12px; }
+    #zip-toggle-link {
+      background: none; border: none; color: rgba(255,255,255,0.35);
+      font-size: 11px; font-family: inherit; cursor: pointer; padding: 0;
+      text-decoration: underline; text-decoration-color: rgba(255,255,255,0.2);
+    }
+    #zip-toggle-link:hover { color: rgba(255,255,255,0.55); }
+    #zip-entry { display: flex; gap: 6px; align-items: center; }
+    #zip-input {
+      flex: 1; min-width: 0; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 7px;
+      padding: 7px 10px; color: #fff; font-size: 12px; font-family: inherit;
+      outline: none;
+    }
+    #zip-input:focus { border-color: rgba(0,255,136,0.4); }
+    #zip-go-btn {
+      background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.3);
+      color: #00ff88; font-size: 11px; font-weight: 700; font-family: inherit;
+      border-radius: 7px; padding: 7px 12px; cursor: pointer; flex-shrink: 0;
+    }
+    #zip-go-btn:hover { background: rgba(0,255,136,0.2); }
+    #zip-cancel-btn {
+      background: none; border: none; color: rgba(255,255,255,0.3);
+      font-size: 13px; cursor: pointer; padding: 4px 6px; flex-shrink: 0;
+    }
+    #zip-status { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 6px; line-height: 1.4; }
+    #zip-status.error { color: #ff6b6b; }
+    #zip-status.success { color: #00ff88; }
+
     #locate-btn {
       display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
       color: #00ff88; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.25);
@@ -105,6 +136,14 @@
     #commute-job-title { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; }
     #commute-job-company { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
     #commute-modes { display: flex; gap: 8px; }
+    #uber-link {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      background: #000; border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px; padding: 9px; font-size: 12px; font-weight: 600;
+      color: #fff; text-decoration: none; transition: all 0.15s;
+    }
+    #uber-link:hover { background: #1a1a1a; border-color: rgba(255,255,255,0.3); }
+    #uber-link .uber-icon { font-size: 13px; }
     .commute-mode {
       flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 8px; padding: 8px 6px; text-align: center; cursor: pointer;
@@ -262,18 +301,29 @@
 <body>
 <div id="app">
   <div id="sidebar">
-    <div id="sidebar-header">
-      <div>
-        <div class="logo">Labor Network</div>
-        <div class="tagline">Hyperlocal jobs · DFW</div>
+    <div id="sidebar-header-wrap">
+      <div id="sidebar-header">
+        <div>
+          <div class="logo">Labor Network</div>
+          <div class="tagline">Hyperlocal jobs · DFW</div>
+        </div>
+        <button id="locate-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+            <circle cx="12" cy="12" r="8" stroke-opacity="0.35"/>
+          </svg>
+          Share location
+        </button>
       </div>
-      <button id="locate-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
-          <circle cx="12" cy="12" r="8" stroke-opacity="0.35"/>
-        </svg>
-        Share location
-      </button>
+      <div id="zip-row">
+        <button id="zip-toggle-link">or search by ZIP code</button>
+        <div id="zip-entry" style="display:none">
+          <input id="zip-input" type="text" inputmode="numeric" maxlength="5" placeholder="75201" />
+          <button id="zip-go-btn">Go</button>
+          <button id="zip-cancel-btn" title="Cancel">✕</button>
+        </div>
+        <div id="zip-status"></div>
+      </div>
     </div>
 
     <div id="filter-wrap">
@@ -320,6 +370,9 @@
           <div class="mode-time loading" id="time-cycling">—</div>
         </div>
       </div>
+      <a id="uber-link" href="#" target="_blank" rel="noopener">
+        <span class="uber-icon">🚕</span> Request a ride with Uber
+      </a>
       <div id="traffic-badge" class="clear"><span class="dot"></span><span id="traffic-label">Checking traffic…</span></div>
     </div>
 
@@ -367,7 +420,7 @@
   mapboxgl.accessToken = 'pk.eyJ1IjoiY29yZXlkZXZkZnciLCJhIjoiY21xaHVvanM2MDE3bDJ0cHB4NTF4andpdiJ9.7zXPq8gI54J5-OEEh69E5w';
   const APP_ID  = 'b7919541';
   const APP_KEY = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
-  const JOOBLE_KEY = ''; // ← paste your Jooble API key here once approved, e.g. 'abc123xyz'
+  const JOOBLE_KEY = '793b9078-aa0b-4215-bb1a-0cd3d05d245f'; 
   let CENTER    = [-96.7970, 33.0137];
   let userLocated = false;
   const RADIUS  = 25;
@@ -467,6 +520,89 @@
   }
   document.getElementById('locate-btn').addEventListener('click', requestLocation);
   setTimeout(()=>{ if(!userLocated) document.getElementById('location-banner').classList.add('show'); }, 3000);
+
+  // ── ZIP code search ──────────────────────────────────────────────────────
+  // Additive alternate location path. Must never silently override an
+  // already-granted GPS location — if GPS is active, ZIP requires explicit
+  // confirmation before replacing CENTER.
+  const zipToggleLink = document.getElementById('zip-toggle-link');
+  const zipEntry = document.getElementById('zip-entry');
+  const zipInput = document.getElementById('zip-input');
+  const zipStatus = document.getElementById('zip-status');
+
+  zipToggleLink.addEventListener('click', () => {
+    const opening = zipEntry.style.display === 'none';
+    zipEntry.style.display = opening ? 'flex' : 'none';
+    zipToggleLink.style.display = opening ? 'none' : 'block';
+    if (opening) zipInput.focus();
+  });
+
+  document.getElementById('zip-cancel-btn').addEventListener('click', () => {
+    zipEntry.style.display = 'none';
+    zipToggleLink.style.display = 'block';
+    zipStatus.textContent = '';
+    zipStatus.className = '';
+    zipInput.value = '';
+  });
+
+  zipInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitZip(); });
+  document.getElementById('zip-go-btn').addEventListener('click', submitZip);
+
+  async function geocodeZip(zip) {
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(zip)}.json?country=US&types=postcode&access_token=${mapboxgl.accessToken}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.features || !data.features.length) return null;
+    return data.features[0].center; // [lng, lat]
+  }
+
+  async function submitZip() {
+    const zip = zipInput.value.trim();
+    if (!/^\d{5}$/.test(zip)) {
+      zipStatus.textContent = 'Please enter a valid 5-digit ZIP code.';
+      zipStatus.className = 'error';
+      return;
+    }
+
+    // If GPS location is already active, require explicit confirmation —
+    // ZIP must never silently override a real, already-granted location.
+    if (userLocated) {
+      const confirmed = confirm(
+        `You're currently using your shared location for the most accurate results.\n\n` +
+        `Search ZIP ${zip} instead? This will replace your shared location until you share it again.`
+      );
+      if (!confirmed) return;
+    }
+
+    zipStatus.textContent = 'Looking up ZIP code…';
+    zipStatus.className = '';
+
+    const coords = await geocodeZip(zip);
+    if (!coords) {
+      zipStatus.textContent = `Couldn't find ZIP ${zip}. Please double-check and try again.`;
+      zipStatus.className = 'error';
+      return;
+    }
+
+    CENTER = coords;
+    userLocated = false; // ZIP is an approximate area, not a precise GPS fix
+    routeCache = {};
+
+    // Remove the precise "you are here" marker — it no longer applies to a ZIP-based area
+    if (userMarker) { userMarker.remove(); userMarker = null; }
+
+    map.flyTo({ center: CENTER, zoom: 12, pitch: 40, duration: 1400 });
+    updateCircle();
+
+    const locateBtn = document.getElementById('locate-btn');
+    locateBtn.classList.remove('located');
+    locateBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.35"/></svg> Share location`;
+
+    zipStatus.textContent = `Showing jobs near ${zip}.`;
+    zipStatus.className = 'success';
+
+    await refetchJobsAroundCenter();
+  }
   setTimeout(()=>document.getElementById('location-banner').classList.remove('show'), 9000);
 
   // ── Commute / Directions ──────────────────────────────────────────────────
@@ -524,6 +660,13 @@
     document.getElementById('traffic-label').textContent = 'Checking traffic…';
 
     const dest = [job.lng, job.lat];
+
+    // Build Uber deep-link: pickup = CENTER (user location or default DFW center), dropoff = job
+    const uberUrl = `https://m.uber.com/ul/?action=setPickup` +
+      `&pickup[latitude]=${CENTER[1]}&pickup[longitude]=${CENTER[0]}` +
+      `&dropoff[latitude]=${job.lat}&dropoff[longitude]=${job.lng}` +
+      `&dropoff[nickname]=${encodeURIComponent(job.company || job.title)}`;
+    document.getElementById('uber-link').href = uberUrl;
 
     // Fetch all three modes
     const [driveRoute, walkRoute, bikeRoute] = await Promise.all([
