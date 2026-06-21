@@ -100,8 +100,9 @@
     }
     #view-toggle button {
       border: none; background: transparent; color: rgba(255,255,255,0.4);
-      font-size: 11px; font-weight: 600; padding: 9px 10px; cursor: pointer;
-      font-family: inherit; transition: all 0.15s; display: flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 600; padding: 9px 8px; cursor: pointer;
+      font-family: inherit; transition: all 0.15s; display: flex; align-items: center; gap: 3px;
+      white-space: nowrap;
     }
     #view-toggle button.active { background: rgba(0,255,136,0.14); color: #00ff88; }
     #view-toggle button svg { width: 13px; height: 13px; }
@@ -121,8 +122,10 @@
     #category-select {
       width: 100%; appearance: none; -webkit-appearance: none;
       background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; padding: 9px 28px 9px 26px; color: #fff; font-size: 12px;
+      border-radius: 8px; padding: 9px 24px 9px 26px; color: #fff; font-size: 12px;
       font-weight: 600; cursor: pointer; outline: none; font-family: inherit;
+      text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+      min-width: 0;
     }
     #category-select:focus { border-color: rgba(0,255,136,0.4); }
     #category-select option { background: #1a1a1a; color: #fff; }
@@ -155,6 +158,7 @@
     .commute-mode .mode-label { font-size: 8px; color: rgba(255,255,255,0.4); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; }
     .commute-mode .mode-time { font-size: 11px; font-weight: 700; color: #fff; margin-top: 1px; white-space: nowrap; }
     .commute-mode .mode-time.loading { color: rgba(255,255,255,0.3); font-size: 9px; }
+    .commute-mode .mode-time.unrealistic { color: rgba(255,255,255,0.3); font-weight: 500; font-size: 10px; }
     #traffic-badge {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: 10px; padding: 3px 9px; border-radius: 10px; font-weight: 600;
@@ -443,7 +447,7 @@
 
   const CATEGORIES = [
     { tag:'placeholder',              label:'Select a category…',    color:'#555' },
-    { tag:'all',                      label:'All Categories',         color:'#00ff88' },
+    { tag:'all',                      label:'All Jobs',                color:'#00ff88' },
     { tag:'logistics-warehouse-jobs', label:'Warehouse & Logistics',  color:'#ff9f43' },
     { tag:'manufacturing-jobs',       label:'Manufacturing',          color:'#54a0ff' },
     { tag:'trade-construction-jobs',  label:'Trades & Construction',  color:'#ffd32a' },
@@ -704,12 +708,14 @@
     if (walkRoute) {
       const el = document.getElementById('time-walking');
       el.textContent = formatTime(walkRoute.duration);
-      el.className = 'mode-time';
+      // De-emphasize unrealistic walk times (45+ min) rather than show them
+      // with the same visual weight as a genuinely viable option.
+      el.className = walkRoute.duration > 2700 ? 'mode-time unrealistic' : 'mode-time';
     }
     if (bikeRoute) {
       const el = document.getElementById('time-cycling');
       el.textContent = formatTime(bikeRoute.duration);
-      el.className = 'mode-time';
+      el.className = bikeRoute.duration > 3600 ? 'mode-time unrealistic' : 'mode-time';
     }
 
     // Draw active mode route
@@ -750,8 +756,10 @@
   // parameter format can't be verified from here. Rather than risk silently
   // broken pre-fill links, we open DART's trip planner directly — always works,
   // just without guaranteed auto-fill of origin/destination.
+  // tripplan.dart.org appears to be a dead/deprecated subdomain (reported as a dead link).
+  // The current, live trip planner is hosted directly on dart.org.
   function openDartTripPlanner() {
-    window.open('https://tripplan.dart.org/', '_blank', 'noopener');
+    window.open('https://www.dart.org/trip/trip-planner/trip-planner-map', '_blank', 'noopener');
   }
 
   function closeCommute() {
