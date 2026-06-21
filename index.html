@@ -61,8 +61,19 @@
     #locate-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
 
     /* ── Filter ── */
-    #filter-wrap { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
-    #filter-select-wrap { position: relative; display: flex; align-items: center; }
+    #filter-wrap { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; display: flex; gap: 8px; align-items: center; }
+    #filter-select-wrap { flex: 1; position: relative; display: flex; align-items: center; }
+    #view-toggle {
+      display: flex; flex-shrink: 0; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;
+    }
+    #view-toggle button {
+      border: none; background: transparent; color: rgba(255,255,255,0.4);
+      font-size: 11px; font-weight: 600; padding: 9px 10px; cursor: pointer;
+      font-family: inherit; transition: all 0.15s; display: flex; align-items: center; gap: 4px;
+    }
+    #view-toggle button.active { background: rgba(0,255,136,0.14); color: #00ff88; }
+    #view-toggle button svg { width: 13px; height: 13px; }
     #cat-dot { position: absolute; left: 10px; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; transition: background 0.2s; z-index: 1; }
     #filter-select-wrap::after { content: '▾'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); font-size: 11px; pointer-events: none; }
     #category-select {
@@ -209,6 +220,14 @@
       <div id="filter-select-wrap">
         <span id="cat-dot"></span>
         <select id="category-select"></select>
+      </div>
+      <div id="view-toggle">
+        <button id="toggle-pins" class="active" title="Pin view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 1114 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        </button>
+        <button id="toggle-heatmap" title="Hiring heatmap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8 6 6 9 6 13a6 6 0 1012 0c0-4-2-7-6-11z"/></svg>
+        </button>
       </div>
     </div>
 
@@ -522,6 +541,26 @@
     renderSidebar(); updateMapLayer();
   });
 
+  // ── View toggle: pins/clusters vs heatmap ───────────────────────────────────
+  let viewMode = 'pins';
+  const pinsBtn = document.getElementById('toggle-pins');
+  const heatBtn = document.getElementById('toggle-heatmap');
+
+  function setViewMode(mode) {
+    viewMode = mode;
+    pinsBtn.classList.toggle('active', mode === 'pins');
+    heatBtn.classList.toggle('active', mode === 'heatmap');
+    if (!map.getLayer('jobs-heat')) return;
+    const pinVis = mode === 'pins' ? 'visible' : 'none';
+    const heatVis = mode === 'heatmap' ? 'visible' : 'none';
+    map.setLayoutProperty('clusters', 'visibility', pinVis);
+    map.setLayoutProperty('cluster-count', 'visibility', pinVis);
+    map.setLayoutProperty('unclustered-point', 'visibility', pinVis);
+    map.setLayoutProperty('jobs-heat', 'visibility', heatVis);
+  }
+  pinsBtn.addEventListener('click', () => setViewMode('pins'));
+  heatBtn.addEventListener('click', () => setViewMode('heatmap'));
+
   // ── Sidebar ───────────────────────────────────────────────────────────────
   function filteredJobs() {
     return (activeFilter==='all'||activeFilter==='placeholder') ? allJobs : allJobs.filter(j=>j.category===activeFilter);
@@ -587,6 +626,28 @@
 
     // Jobs
     map.addSource('jobs',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:48});
+    // Heatmap layer — hiring density, toggled separately from pins/clusters
+    map.addLayer({
+      id: 'jobs-heat', type: 'heatmap', source: 'jobs',
+      maxzoom: 16,
+      layout: { visibility: 'none' },
+      paint: {
+        'heatmap-weight': 1,
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 3],
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0,   'rgba(0,0,0,0)',
+          0.2, 'rgba(0,80,60,0.5)',
+          0.4, 'rgba(0,180,110,0.65)',
+          0.6, 'rgba(0,255,136,0.75)',
+          0.8, 'rgba(255,193,7,0.8)',
+          1,   'rgba(255,80,80,0.9)'
+        ],
+        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 8, 16, 14, 36],
+        'heatmap-opacity': 0.85
+      }
+    }, 'clusters');
+
     map.addLayer({id:'clusters',type:'circle',source:'jobs',filter:['has','point_count'],paint:{'circle-color':['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],'circle-radius':['step',['get','point_count'],18,5,24,15,30],'circle-opacity':0.9,'circle-stroke-width':1.5,'circle-stroke-color':'rgba(0,255,136,0.3)'}});
     map.addLayer({id:'cluster-count',type:'symbol',source:'jobs',filter:['has','point_count'],layout:{'text-field':'{point_count_abbreviated}','text-font':['DIN Pro Bold','Arial Unicode MS Bold'],'text-size':12},paint:{'text-color':'#0a0a0a'}});
     map.addLayer({id:'unclustered-point',type:'circle',source:'jobs',filter:['!',['has','point_count']],paint:{'circle-color':['coalesce',['get','color'],'#00ff88'],'circle-radius':['interpolate',['linear'],['zoom'],13,6,16,10],'circle-stroke-width':1.5,'circle-stroke-color':'rgba(255,255,255,0.2)','circle-opacity':0.95}});
