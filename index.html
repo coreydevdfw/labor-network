@@ -193,6 +193,14 @@
     .card-title { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 3px; line-height: 1.35; }
     .card-company { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
     .card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .card-drivetime {
+      display: flex; align-items: center; gap: 5px; margin-bottom: 6px;
+      font-size: 11px; color: rgba(255,255,255,0.5);
+    }
+    .dt-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .dt-dot.clear { background: #00ff88; }
+    .dt-dot.moderate { background: #ffc107; }
+    .dt-dot.heavy { background: #ff6b6b; }
     .card-cat { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.06); }
     .card-apply { font-size: 10px; font-weight: 700; color: #00ff88; text-decoration: none; }
     .card-apply:hover { text-decoration: underline; }
@@ -369,10 +377,10 @@
           <div class="mode-label">Bike</div>
           <div class="mode-time loading" id="time-cycling">—</div>
         </div>
-        <div class="commute-mode" id="mode-dart" onclick="openDartTripPlanner()">
+        <div class="commute-mode" id="mode-dart" onclick="openDartTripPlanner()" title="Opens DART's trip planner in a new tab">
           <div class="mode-icon">🚈</div>
           <div class="mode-label">DART</div>
-          <div class="mode-time" id="time-dart" style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:500;">Plan trip</div>
+          <div class="mode-time" id="time-dart" style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:500;">Open planner</div>
         </div>
       </div>
       <a id="uber-link" href="#" target="_blank" rel="noopener">
@@ -738,15 +746,12 @@
     if (currentJob) drawRoute(mode, [currentJob.lng, currentJob.lat]);
   }
 
-  // DART doesn't expose a documented deep-link API for pre-filled trip planning,
-  // so we open their official trip planner in a new tab. We pass coordinates as
-  // a best-effort query string; DART's planner may or may not auto-populate them,
-  // but it always opens to a working, official trip-planning tool either way.
+  // DART blocks automated access to their site, so the exact trip-planner query
+  // parameter format can't be verified from here. Rather than risk silently
+  // broken pre-fill links, we open DART's trip planner directly — always works,
+  // just without guaranteed auto-fill of origin/destination.
   function openDartTripPlanner() {
-    if (!currentDartDest) { window.open('https://tripplan.dart.org/', '_blank', 'noopener'); return; }
-    const [destLng, destLat] = currentDartDest;
-    const url = `https://tripplan.dart.org/?fromPlace=${CENTER[1]},${CENTER[0]}&toPlace=${destLat},${destLng}`;
-    window.open(url, '_blank', 'noopener');
+    window.open('https://tripplan.dart.org/', '_blank', 'noopener');
   }
 
   function closeCommute() {
@@ -836,10 +841,35 @@
       const cat = catInfo(job.category);
       const card = document.createElement('div');
       card.className='job-card'; card.dataset.index=i; card.style.borderLeftColor=cat.color;
-      card.innerHTML=`<div class="card-title">${job.title}</div><div class="card-company">${job.company}</div><div class="card-footer"><span class="card-cat" style="color:${cat.color}">${cat.label}</span><a class="card-apply" href="${job.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Apply →</a></div>`;
+      card.innerHTML=`<div class="card-title">${job.title}</div><div class="card-company">${job.company}</div><div class="card-drivetime" id="drivetime-${i}"><span class="dt-dot clear"></span><span class="dt-text">…</span></div><div class="card-footer"><span class="card-cat" style="color:${cat.color}">${cat.label}</span><a class="card-apply" href="${job.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Apply →</a></div>`;
       card.addEventListener('click',()=>focusJob(job,card));
       list.appendChild(card);
     });
+    loadCardDriveTimes(jobs);
+  }
+
+  // ── Lazy, batched drive-time + traffic fetch for visible job cards ─────────
+  // Limits concurrent requests to avoid hammering the Directions API when a
+  // category has many results. Reuses the same routeCache as the commute panel.
+  async function loadCardDriveTimes(jobs) {
+    const BATCH_SIZE = 8;
+    const MAX_CARDS = 40; // safety cap — don't fetch traffic for huge unfiltered lists
+    const targets = jobs.slice(0, MAX_CARDS);
+
+    for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+      const batch = targets.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async (job, batchIdx) => {
+        const idx = i + batchIdx;
+        const el = document.getElementById(`drivetime-${idx}`);
+        if (!el) return; // card may have been re-rendered (filter changed) mid-fetch
+        const route = await fetchRoute('driving', [job.lng, job.lat]);
+        const el2 = document.getElementById(`drivetime-${idx}`); // re-check after async gap
+        if (!el2 || !route) return;
+        const level = trafficFromCongestion(route.legs);
+        el2.querySelector('.dt-dot').className = `dt-dot ${level}`;
+        el2.querySelector('.dt-text').textContent = `${formatTime(route.duration)} drive`;
+      }));
+    }
   }
 
   function focusJob(job, card) {
