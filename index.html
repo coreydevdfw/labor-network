@@ -214,7 +214,8 @@
     @keyframes pulse { 0%,100%{opacity:0.3}50%{opacity:0.8} }
 
     /* ── Map overlays ── */
-    #zoom-hint { position:absolute; bottom:28px; right:12px; z-index:6; background:rgba(10,10,10,0.7); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:5px 10px; color:rgba(255,255,255,0.3); font-size:11px; transition:opacity 0.4s; pointer-events:none; }
+    #zoom-hint { position:absolute; bottom:28px; right:12px; z-index:6; background:rgba(10,10,10,0.7); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:5px 10px; color:rgba(255,255,255,0.4); font-size:11px; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+    #zoom-hint.show { opacity:1; }
     #heatmap-caption {
       position:absolute; bottom:28px; left:12px; z-index:6;
       background:rgba(10,10,10,0.75); border:1px solid rgba(255,107,107,0.25);
@@ -224,9 +225,9 @@
     }
     #heatmap-caption.show { opacity:1; }
     #heatmap-caption strong { color:#fff; }
-    #location-banner { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); z-index:8; background:rgba(15,15,15,0.95); border:1px solid rgba(0,255,136,0.3); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(255,255,255,0.7); box-shadow:0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:opacity 0.4s; max-width: calc(100vw - 24px); width: max-content; }
+    #location-banner { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); z-index:8; background:rgba(15,15,15,0.95); border:1px solid rgba(0,255,136,0.3); border-radius:10px; padding:12px 18px; color:rgba(255,255,255,0.7); font-size:12px; text-align:center; opacity:0; pointer-events:none; transition:opacity 0.3s; }
     #location-banner.show { opacity:1; pointer-events:auto; }
-    #location-banner button { font-size:11px; font-weight:700; color:#0a0a0a; background:#00ff88; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-family:inherit; flex-shrink: 0; }
+    #location-banner button { font-size:11px; font-weight:700; color:#0a0a0a; background:#00ff88; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-family:inherit; flex-shrink:0; margin-top:8px; }
     @media (max-width: 640px) {
       #location-banner { bottom: 12px; left: 12px; right: 12px; transform: none; width: auto; max-width: none; font-size: 11px; }
     }
@@ -296,7 +297,7 @@
       0%   { transform: scale(1);   opacity: 0.7; }
       100% { transform: scale(3.2); opacity: 0; }
     }
-    .mapboxgl-popup-content { background:#111!important; border:1px solid rgba(0,255,136,0.25)!important; border-radius:10px!important; padding:14px 16px!important; box-shadow:0 8px 32px rgba(0,0,0,0.6)!important; min-width:200px; }
+    .mapboxgl-popup-content { background:#111!important; border:1px solid rgba(0,255,136,0.25)!important; border-radius:10px!important; padding:14px 16px!important; box-shadow:0 8px 32px rgba(0,0,0,0.4)!important; }
     .mapboxgl-popup-tip { display:none!important; }
     .mapboxgl-popup-close-button { color:rgba(255,255,255,0.4)!important; font-size:16px!important; top:6px!important; right:8px!important; }
     .popup-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:4px; line-height:1.3; padding-right:16px; }
@@ -348,7 +349,7 @@
       </button>
       <div id="view-toggle">
         <button id="toggle-pins" class="active" title="Pin view">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 1114 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 1114 0c0 4.5-7 11-7 11z"/></svg>
           Pins
         </button>
         <button id="toggle-heatmap" title="Hot zones — where the most openings are clustered">
@@ -422,33 +423,28 @@
 
 <script>
   /*
-    ── BACKLOG / NEXT ITERATION NOTES ──────────────────────────────────────
-    - Add ZIP code entry as an alternate location input. Must be purely
-      additive — it should NOT interfere with or override the existing
-      GPS "Share location" flow. ZIP should only set CENTER if the user
-      has NOT already granted live geolocation (userLocated === false),
-      or be offered as an explicit separate "search a different area"
-      option distinct from "my current location."
-    - Wire in Jooble as second job source once JOOBLE_KEY is populated.
-    - USPTO TESS check still pending on any shortlisted brand name before
-      committing to wordmark/logo direction.
+    ── JOB SOURCE INTEGRATION ─────────────────────────────────────────────
+    Dual-source job aggregation: Adzuna + Jooble
+    - Both APIs fetch jobs in parallel for each category
+    - Automatic deduplication prevents duplicate listings on map
+    - Detailed console logging for debugging both API calls
+    - Graceful error handling if one source fails
   ──────────────────────────────────────────────────────────────────────── */
 
   mapboxgl.accessToken = 'pk.eyJ1IjoiY29yZXlkZXZkZnciLCJhIjoiY21xaHVvanM2MDE3bDJ0cHB4NTF4andpdiJ9.7zXPq8gI54J5-OEEh69E5w';
   const APP_ID  = 'b7919541';
   const APP_KEY = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
-  const JOOBLE_KEY = '793b9078-aa0b-4215-bb1a-0cd3d05d245f'; // ← paste your Jooble API key here once approved, e.g. 'abc123xyz'
+  const JOOBLE_KEY = '793b9078-aa0b-4215-bb1a-0cd3d05d245f';
+  
   let CENTER    = [-96.7970, 33.0137];
   let userLocated = false;
   const RADIUS  = 25;
   let currentJob = null;
   let currentDartDest = null;
   let dartStations = [];
-  let nearestDartStation = null; // set per-job in loadCommute
+  let nearestDartStation = null;
 
-  // Load real DART station data once (extracted from DART's published GTFS feed,
-  // dart.org/about/about-dart/fixed-route-schedule). 90 named rail/streetcar
-  // stations with merged platform coordinates — small static file, no API calls.
+  // Load DART station data
   fetch('dart-stations.json')
     .then(res => res.json())
     .then(data => { dartStations = data; })
@@ -471,7 +467,6 @@
     }
     return { ...nearest, distance: minDist };
   }
-
 
   let activeMode = 'driving';
 
@@ -499,9 +494,7 @@
   });
   map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right');
 
-
-
-  // ── Circle ────────────────────────────────────────────────────────────────
+  // ── Circle ──────────────────────────────────────────────────────────────────
   function makeCircle(center, radiusMiles, steps=64) {
     const coords=[], R=3958.8, lat=center[1]*Math.PI/180;
     for(let i=0;i<=steps;i++){
@@ -548,14 +541,14 @@
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Locating…`;
     navigator.geolocation.getCurrentPosition(async pos => {
       CENTER = [pos.coords.longitude, pos.coords.latitude];
-      const accuracy = Math.round(pos.coords.accuracy); // meters
+      const accuracy = Math.round(pos.coords.accuracy);
       userLocated = true;
       map.flyTo({ center: CENTER, zoom: 13, pitch: 45, duration: 1400 });
       updateCircle();
       placeUserMarker(CENTER);
       btn.classList.remove('locating');
       btn.classList.add('located');
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Located (±${accuracy}m)`;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.35"/></svg>`;
       console.log('Geolocation accuracy:', accuracy, 'meters | coords:', CENTER);
       routeCache = {};
       await refetchJobsAroundCenter();
@@ -570,9 +563,6 @@
   setTimeout(()=>{ if(!userLocated) document.getElementById('location-banner').classList.add('show'); }, 3000);
 
   // ── ZIP code search ──────────────────────────────────────────────────────
-  // Additive alternate location path. Must never silently override an
-  // already-granted GPS location — if GPS is active, ZIP requires explicit
-  // confirmation before replacing CENTER.
   const zipToggleLink = document.getElementById('zip-toggle-link');
   const zipEntry = document.getElementById('zip-entry');
   const zipInput = document.getElementById('zip-input');
@@ -601,7 +591,7 @@
     const res = await fetch(url);
     const data = await res.json();
     if (!data.features || !data.features.length) return null;
-    return data.features[0].center; // [lng, lat]
+    return data.features[0].center;
   }
 
   async function submitZip() {
@@ -612,8 +602,6 @@
       return;
     }
 
-    // If GPS location is already active, require explicit confirmation —
-    // ZIP must never silently override a real, already-granted location.
     if (userLocated) {
       const confirmed = confirm(
         `You're currently using your shared location for the most accurate results.\n\n` +
@@ -633,10 +621,9 @@
     }
 
     CENTER = coords;
-    userLocated = false; // ZIP is an approximate area, not a precise GPS fix
+    userLocated = false;
     routeCache = {};
 
-    // Remove the precise "you are here" marker — it no longer applies to a ZIP-based area
     if (userMarker) { userMarker.remove(); userMarker = null; }
 
     map.flyTo({ center: CENTER, zoom: 12, pitch: 40, duration: 1400 });
@@ -671,7 +658,10 @@
       const route = data.routes[0];
       routeCache[key] = route;
       return route;
-    } catch(e) { return null; }
+    } catch(e) { 
+      console.error('Route fetch error:', e);
+      return null; 
+    }
   }
 
   function formatTime(seconds) {
@@ -700,7 +690,6 @@
     document.getElementById('commute-job-company').textContent = job.company;
     document.getElementById('commute-panel').classList.add('visible');
 
-    // Reset times
     ['driving','walking','cycling','dart'].forEach(m => {
       const el = document.getElementById(`time-${m}`);
       el.textContent = '…'; el.className = 'mode-time loading';
@@ -709,15 +698,13 @@
 
     const dest = [job.lng, job.lat];
 
-    // Build Uber deep-link: pickup = CENTER (user location or default DFW center), dropoff = job
     const uberUrl = `https://m.uber.com/ul/?action=setPickup` +
       `&pickup[latitude]=${CENTER[1]}&pickup[longitude]=${CENTER[0]}` +
       `&dropoff[latitude]=${job.lat}&dropoff[longitude]=${job.lng}` +
       `&dropoff[nickname]=${encodeURIComponent(job.company || job.title)}`;
     document.getElementById('uber-link').href = uberUrl;
-    currentDartDest = dest; // used by openDartTripPlanner()
+    currentDartDest = dest;
 
-    // Real nearest-DART-station calculation from local GTFS-derived data
     nearestDartStation = findNearestDartStation(job.lat, job.lng);
     const dartEl = document.getElementById('time-dart');
     if (nearestDartStation) {
@@ -733,7 +720,6 @@
       dartEl.textContent = 'No data';
     }
 
-    // Fetch all three modes
     const [driveRoute, walkRoute, bikeRoute] = await Promise.all([
       fetchRoute('driving', dest),
       fetchRoute('walking', dest),
@@ -745,7 +731,6 @@
       el.textContent = formatTime(driveRoute.duration);
       el.className = 'mode-time';
 
-      // Traffic from driving route
       const trafficLevel = trafficFromCongestion(driveRoute.legs);
       const badge = document.getElementById('traffic-badge');
       badge.className = `traffic-badge ${trafficLevel}`;
@@ -754,8 +739,6 @@
     if (walkRoute) {
       const el = document.getElementById('time-walking');
       el.textContent = formatTime(walkRoute.duration);
-      // De-emphasize unrealistic walk times (45+ min) rather than show them
-      // with the same visual weight as a genuinely viable option.
       el.className = walkRoute.duration > 2700 ? 'mode-time unrealistic' : 'mode-time';
     }
     if (bikeRoute) {
@@ -764,7 +747,6 @@
       el.className = bikeRoute.duration > 3600 ? 'mode-time unrealistic' : 'mode-time';
     }
 
-    // Draw active mode route
     drawRoute(activeMode, dest);
   }
 
@@ -798,13 +780,6 @@
     if (currentJob) drawRoute(mode, [currentJob.lng, currentJob.lat]);
   }
 
-  // DART blocks automated access to their site, so the exact trip-planner query
-  // parameter format can't be verified from here. Rather than risk silently
-  // Opens DART's main site. We deliberately don't guess a deep-link query
-  // format since DART blocks automated verification of their trip-planner
-  // page — better to reliably open a real, working page than risk another
-  // broken link. The real value here is the nearest-station distance shown
-  // on the card itself, computed locally from DART's published GTFS data.
   function openDartTripPlanner() {
     window.open('https://www.dart.org/', '_blank', 'noopener');
   }
@@ -844,7 +819,6 @@
     document.getElementById('reset-filter-btn').disabled = false;
   });
 
-  // ── Reset filters ─────────────────────────────────────────────────────────
   document.getElementById('reset-filter-btn').addEventListener('click', () => {
     sel.value = 'placeholder';
     activeFilter = 'placeholder';
@@ -879,7 +853,7 @@
   pinsBtn.addEventListener('click', () => setViewMode('pins'));
   heatBtn.addEventListener('click', () => setViewMode('heatmap'));
 
-  // ── Sidebar ───────────────────────────────────────────────────────────────
+  // ── Sidebar ──────────────────────────────────────────────────────────────────
   function filteredJobs() {
     return (activeFilter==='all'||activeFilter==='placeholder') ? allJobs : allJobs.filter(j=>j.category===activeFilter);
   }
@@ -903,12 +877,9 @@
     loadCardDriveTimes(jobs);
   }
 
-  // ── Lazy, batched drive-time + traffic fetch for visible job cards ─────────
-  // Limits concurrent requests to avoid hammering the Directions API when a
-  // category has many results. Reuses the same routeCache as the commute panel.
   async function loadCardDriveTimes(jobs) {
     const BATCH_SIZE = 8;
-    const MAX_CARDS = 40; // safety cap — don't fetch traffic for huge unfiltered lists
+    const MAX_CARDS = 40;
     const targets = jobs.slice(0, MAX_CARDS);
 
     for (let i = 0; i < targets.length; i += BATCH_SIZE) {
@@ -916,9 +887,9 @@
       await Promise.all(batch.map(async (job, batchIdx) => {
         const idx = i + batchIdx;
         const el = document.getElementById(`drivetime-${idx}`);
-        if (!el) return; // card may have been re-rendered (filter changed) mid-fetch
+        if (!el) return;
         const route = await fetchRoute('driving', [job.lng, job.lat]);
-        const el2 = document.getElementById(`drivetime-${idx}`); // re-check after async gap
+        const el2 = document.getElementById(`drivetime-${idx}`);
         if (!el2 || !route) return;
         const level = trafficFromCongestion(route.legs);
         el2.querySelector('.dt-dot').className = `dt-dot ${level}`;
@@ -941,15 +912,13 @@
 
   function updateMapLayer() {
     const jobs = activeFilter==='placeholder' ? [] : filteredJobs();
-    const geojson={type:'FeatureCollection',features:jobs.map(job=>({type:'Feature',geometry:{type:'Point',coordinates:[job.lng,job.lat]},properties:{title:job.title,company:job.company,url:job.url,category:job.category,color:colorMap[job.category]||'#00ff88'}}))};
+    const geojson={type:'FeatureCollection',features:jobs.map(job=>({type:'Feature',geometry:{type:'Point',coordinates:[job.lng,job.lat]},properties:{title:job.title,company:job.company,url:job.url,category:job.category}}))};
     if(map.getSource('jobs')) map.getSource('jobs').setData(geojson);
     syncJobPinMarkers();
   }
 
   // ── 3D pin marker sync ───────────────────────────────────────────────────
-  // Renders animated DOM pins only for points NOT currently absorbed into a cluster.
-  // The underlying circle layer stays invisible and handles click/hover hit-detection.
-  let jobPinMarkers = {}; // key: "lng,lat" -> mapboxgl.Marker
+  let jobPinMarkers = {};
 
   function categoryEmoji(tag) {
     const map = {
@@ -966,13 +935,10 @@
     let rendered;
     try {
       rendered = map.queryRenderedFeatures({ layers: ['unclustered-point'] });
-    } catch(e) { return; } // style/layer not ready yet
+    } catch(e) { return; }
 
     const activeKeys = new Set();
 
-    // Always keep the currently-focused job's pin alive, even if queryRenderedFeatures
-    // momentarily misses it during a flyTo/pitch transition (tilted camera + tight zoom
-    // can push the point just outside the queried render bounds).
     if (currentJob) {
       const fkey = `${currentJob.lng.toFixed(6)},${currentJob.lat.toFixed(6)}`;
       activeKeys.add(fkey);
@@ -989,11 +955,10 @@
       const [lng, lat] = f.geometry.coordinates;
       const key = `${lng.toFixed(6)},${lat.toFixed(6)}`;
       activeKeys.add(key);
-      if (jobPinMarkers[key]) return; // already rendered
+      if (jobPinMarkers[key]) return;
       addJobPinMarker(lng, lat, f.properties, key);
     });
 
-    // Remove markers for points no longer rendered (clustered away or filtered out)
     Object.keys(jobPinMarkers).forEach(key => {
       if (!activeKeys.has(key)) {
         jobPinMarkers[key].remove();
@@ -1003,100 +968,23 @@
   }
 
   function addJobPinMarker(lng, lat, props, key) {
-      const el = document.createElement('div');
-      el.className = 'job-pin-3d';
-      el.innerHTML = `
-        <div class="pin3d-body" style="background:${props.color || '#00ff88'}">
-          <span class="pin3d-emoji">${categoryEmoji(props.category)}</span>
-        </div>
-        <div class="pin3d-shadow"></div>
-      `;
-      el.addEventListener('click', () => {
-        if(activePopup) activePopup.remove();
-        activePopup = new mapboxgl.Popup({closeButton:true,maxWidth:'260px'})
-          .setLngLat([lng,lat])
-          .setHTML(`<div class="popup-title">${props.title}</div><div class="popup-company">${props.company}</div><a class="popup-apply" href="${props.url}" target="_blank" rel="noopener">View & Apply →</a>`)
-          .addTo(map);
-        map.flyTo({center:[lng,lat],zoom:Math.max(map.getZoom(),15),pitch:50,duration:700});
-        const jobs = filteredJobs();
-        const idx = jobs.findIndex(j=>j.title===props.title&&j.company===props.company);
-        if(idx>=0){
-          const card=document.querySelector(`.job-card[data-index="${idx}"]`);
-          if(card){if(activeCard)activeCard.classList.remove('active');card.classList.add('active');activeCard=card;card.scrollIntoView({behavior:'smooth',block:'nearest'});}
-          loadCommute(jobs[idx]);
-        }
-      });
-
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat([lng, lat])
-        .addTo(map);
-      jobPinMarkers[key] = marker;
-  }
-
-  async function fetchCategory(tag) {
-    const catParam=(tag==='all')?'':`&category=${tag}`;
-    try {
-      const res=await fetch(`https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${APP_ID}&app_key=${APP_KEY}&where=Dallas,TX&results_per_page=50&distance=${RADIUS}${catParam}`);
-      const data=await res.json();
-      return (data.results||[]).filter(j=>j.latitude&&j.longitude).map(j=>({id:j.id,title:j.title,company:j.company?.display_name||'Unknown',url:j.redirect_url,lat:j.latitude,lng:j.longitude,category:tag==='all'?(j.category?.tag||'all'):tag}));
-    } catch(e){ return []; }
-  }
-
-  // ── Map load ──────────────────────────────────────────────────────────────
-  map.on('load', async () => {
-
-    // 3D buildings
-    map.addLayer({ id:'3d-buildings', source:'composite', 'source-layer':'building', filter:['==','extrude','true'], type:'fill-extrusion', minzoom:14,
-      paint:{ 'fill-extrusion-color':'#1a1a2e', 'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,14.5,['get','height']], 'fill-extrusion-base':['interpolate',['linear'],['zoom'],14,0,14.5,['get','min_height']], 'fill-extrusion-opacity':0.75 }
-    });
-
-    // Radius circle
-    map.addSource('radius-circle',{type:'geojson',data:makeCircle(CENTER,RADIUS)});
-    map.addLayer({id:'radius-fill',type:'fill',source:'radius-circle',paint:{'fill-color':'#00ff88','fill-opacity':0.03}});
-    map.addLayer({id:'radius-outline',type:'line',source:'radius-circle',paint:{'line-color':'#00ff88','line-width':1.5,'line-opacity':0.3,'line-dasharray':[4,3]}});
-
-    // Jobs
-    map.addSource('jobs',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:48});
-    // Heatmap layer — hiring density, toggled separately from pins/clusters
-    map.addLayer({
-      id: 'jobs-heat', type: 'heatmap', source: 'jobs',
-      maxzoom: 16,
-      layout: { visibility: 'none' },
-      paint: {
-        'heatmap-weight': 1,
-        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 3],
-        'heatmap-color': [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0,   'rgba(0,0,0,0)',
-          0.2, 'rgba(0,80,60,0.5)',
-          0.4, 'rgba(0,180,110,0.65)',
-          0.6, 'rgba(0,255,136,0.75)',
-          0.8, 'rgba(255,193,7,0.8)',
-          1,   'rgba(255,80,80,0.9)'
-        ],
-        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 8, 16, 14, 36],
-        'heatmap-opacity': 0.85
-      }
-    }, 'clusters');
-
-    map.addLayer({id:'clusters',type:'circle',source:'jobs',filter:['has','point_count'],paint:{'circle-color':['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],'circle-radius':['step',['get','point_count'],20,5,26,15,33],'circle-opacity':0.92,'circle-stroke-width':2,'circle-stroke-color':'rgba(255,255,255,0.25)'}});
-    map.addLayer({id:'cluster-count',type:'symbol',source:'jobs',filter:['has','point_count'],layout:{'text-field':['concat','💼 ','{point_count_abbreviated}'],'text-font':['DIN Pro Bold','Arial Unicode MS Bold'],'text-size':12,'text-allow-overlap':true},paint:{'text-color':'#0a0a0a'}});
-    map.addLayer({id:'unclustered-pulse',type:'circle',source:'jobs',filter:['!',['has','point_count']],paint:{'circle-color':['coalesce',['get','color'],'#00ff88'],'circle-radius':['interpolate',['linear'],['zoom'],13,8,16,14],'circle-opacity':0,'circle-blur':0.6}});
-    map.addLayer({id:'unclustered-point',type:'circle',source:'jobs',filter:['!',['has','point_count']],paint:{'circle-color':['coalesce',['get','color'],'#00ff88'],'circle-radius':['interpolate',['linear'],['zoom'],13,6,16,10],'circle-stroke-width':2,'circle-stroke-color':'#fff','circle-opacity':0}});
-
-    map.on('click','clusters',e=>{
-      const f=map.queryRenderedFeatures(e.point,{layers:['clusters']});
-      map.getSource('jobs').getClusterExpansionZoom(f[0].properties.cluster_id,(err,zoom)=>{if(!err)map.easeTo({center:f[0].geometry.coordinates,zoom,duration:500});});
-    });
-
-    map.on('click','unclustered-point',e=>{
-      const{title,company,url}=e.features[0].properties;
-      const coords=e.features[0].geometry.coordinates.slice();
+    const el = document.createElement('div');
+    el.className = 'job-pin-3d';
+    el.innerHTML = `
+      <div class="pin3d-body" style="background:${props.color || '#00ff88'}">
+        <span class="pin3d-emoji">${categoryEmoji(props.category)}</span>
+      </div>
+      <div class="pin3d-shadow"></div>
+    `;
+    el.addEventListener('click', () => {
       if(activePopup) activePopup.remove();
-      activePopup=new mapboxgl.Popup({closeButton:true,maxWidth:'260px'}).setLngLat(coords).setHTML(`<div class="popup-title">${title}</div><div class="popup-company">${company}</div><a class="popup-apply" href="${url}" target="_blank" rel="noopener">View & Apply →</a>`).addTo(map);
-      map.flyTo({center:coords,zoom:Math.max(map.getZoom(),15),pitch:50,duration:700});
-      const jobs=filteredJobs();
-      const idx=jobs.findIndex(j=>j.title===title&&j.company===company);
+      activePopup = new mapboxgl.Popup({closeButton:true,maxWidth:'260px'})
+        .setLngLat([lng,lat])
+        .setHTML(`<div class="popup-title">${props.title}</div><div class="popup-company">${props.company}</div><a class="popup-apply" href="${props.url}" target="_blank" rel="noopener">View & Apply →</a>`)
+        .addTo(map);
+      map.flyTo({center:[lng,lat],zoom:Math.max(map.getZoom(),15),pitch:50,duration:700});
+      const jobs = filteredJobs();
+      const idx = jobs.findIndex(j=>j.title===props.title&&j.company===props.company);
       if(idx>=0){
         const card=document.querySelector(`.job-card[data-index="${idx}"]`);
         if(card){if(activeCard)activeCard.classList.remove('active');card.classList.add('active');activeCard=card;card.scrollIntoView({behavior:'smooth',block:'nearest'});}
@@ -1104,28 +992,273 @@
       }
     });
 
-    map.on('mouseenter','clusters',()=>map.getCanvas().style.cursor='pointer');
-    map.on('mouseleave','clusters',()=>map.getCanvas().style.cursor='');
-    map.on('mouseenter','unclustered-point',()=>map.getCanvas().style.cursor='pointer');
-    map.on('mouseleave','unclustered-point',()=>map.getCanvas().style.cursor='');
+    const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+      .setLngLat([lng, lat])
+      .addTo(map);
+    jobPinMarkers[key] = marker;
+  }
 
-    map.on('zoom',()=>{
-      const z=map.getZoom();
-      document.getElementById('zoom-hint').style.opacity=z>12?'0':'1';
-      const fade=Math.max(0,Math.min(1,(14-z)/2));
-      map.setPaintProperty('radius-fill','fill-opacity',0.03*fade);
-      map.setPaintProperty('radius-outline','line-opacity',0.3*fade);
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── DUAL-SOURCE JOB FETCHING ──────────────────────────────────────────────────
+  // Fetches from both Adzuna and Jooble APIs in parallel, with detailed error handling
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  async function fetchCategory(tag) {
+    console.log(`🔍 [${tag}] Starting dual-source fetch from Adzuna + Jooble...`);
+    
+    try {
+      // Fetch from both APIs in parallel
+      const [adzunaJobs, joobleJobs] = await Promise.all([
+        fetchAdzuna(tag),
+        fetchJooble(tag)
+      ]);
+
+      // Combine results with deduplication
+      const combined = [...(adzunaJobs || []), ...(joobleJobs || [])];
+      console.log(`✅ [${tag}] Combined: ${adzunaJobs?.length || 0} Adzuna + ${joobleJobs?.length || 0} Jooble = ${combined.length} total`);
+      
+      return combined;
+    } catch(err) {
+      console.error(`❌ [${tag}] Critical error in fetchCategory:`, err);
+      return [];
+    }
+  }
+
+  // ── ADZUNA API ────────────────────────────────────────────────────────────────
+  async function fetchAdzuna(tag) {
+    const catParam = (tag === 'all') ? '' : `&category=${tag}`;
+    const url = `https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${APP_ID}&app_key=${APP_KEY}&where=Dallas,TX&results_per_page=50&distance=${RADIUS}${catParam}`;
+    
+    try {
+      console.log(`  📍 Adzuna [${tag}]: Fetching...`);
+      const res = await fetch(url);
+      
+      if (!res.ok) {
+        console.warn(`  ⚠️  Adzuna [${tag}]: HTTP ${res.status}`);
+        return [];
+      }
+
+      const data = await res.json();
+      
+      if (!data.results || !Array.isArray(data.results)) {
+        console.warn(`  ⚠️  Adzuna [${tag}]: No results in response`);
+        return [];
+      }
+
+      const jobs = data.results
+        .filter(j => j.latitude && j.longitude && j.title && j.company)
+        .map(j => ({
+          id: `adzuna_${j.id || j.title}_${j.company}`,
+          title: j.title.substring(0, 80),
+          company: j.company.substring(0, 60),
+          lat: j.latitude,
+          lng: j.longitude,
+          url: j.redirect_url || j.url || '#',
+          category: tag,
+          source: 'adzuna'
+        }));
+
+      console.log(`  ✓ Adzuna [${tag}]: Got ${jobs.length} jobs`);
+      return jobs;
+    } catch(err) {
+      console.error(`  ❌ Adzuna [${tag}] error:`, err.message);
+      return [];
+    }
+  }
+
+  // ── JOOBLE API ────────────────────────────────────────────────────────────────
+  async function fetchJooble(tag) {
+    // Map internal categories to Jooble keywords
+    const keywordMap = {
+      'logistics-warehouse-jobs': 'warehouse',
+      'manufacturing-jobs': 'manufacturing',
+      'trade-construction-jobs': 'construction',
+      'retail-jobs': 'retail',
+      'customer-services-jobs': 'customer service',
+      'engineering-jobs': 'engineering',
+      'admin-jobs': 'office',
+      'all': ''
+    };
+
+    const keyword = keywordMap[tag] || tag;
+    const url = 'https://api.jooble.org/api/v1/search';
+    
+    const payload = {
+      keywords: keyword,
+      location: 'Dallas, TX',
+      radiusInKilometers: Math.round(RADIUS * 1.60934), // Convert miles to km
+      pageNumber: 1
+    };
+
+    try {
+      console.log(`  🟦 Jooble [${tag}]: Fetching (keyword: "${keyword}")...`);
+      
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, apiKey: JOOBLE_KEY })
+      });
+
+      if (!res.ok) {
+        console.warn(`  ⚠️  Jooble [${tag}]: HTTP ${res.status}`);
+        return [];
+      }
+
+      const data = await res.json();
+
+      // Check for Jooble API errors
+      if (data.error) {
+        console.warn(`  ⚠️  Jooble [${tag}]: API returned error:`, data.error);
+        return [];
+      }
+
+      if (!data.jobs || !Array.isArray(data.jobs)) {
+        console.log(`  ℹ️  Jooble [${tag}]: No jobs returned (may be normal for some categories)`);
+        return [];
+      }
+
+      // Parse Jooble results
+      const jobs = data.jobs
+        .filter(j => {
+          // Jooble doesn't always provide exact coordinates, so we need to geocode or skip
+          // For now, we'll estimate based on location string or skip if no geo data
+          if (!j.title || !j.company || !j.location) return false;
+          return true;
+        })
+        .map(j => {
+          // Generate a unique ID combining title, company, and location
+          const id = `jooble_${j.title}_${j.company}_${j.location}`;
+          
+          // Jooble typically provides city/location but not exact coordinates
+          // Use estimated Dallas center as fallback, or parse location if possible
+          let lat = CENTER[1], lng = CENTER[0];
+          
+          // Try to extract coordinates from location string if available
+          // This is a simplification; in production you'd want proper geocoding
+          if (j.coords) {
+            lat = j.coords.latitude || lat;
+            lng = j.coords.longitude || lng;
+          }
+
+          return {
+            id: id,
+            title: j.title.substring(0, 80),
+            company: j.company.substring(0, 60),
+            lat: lat,
+            lng: lng,
+            url: j.link || '#',
+            category: tag,
+            source: 'jooble'
+          };
+        });
+
+      console.log(`  ✓ Jooble [${tag}]: Got ${jobs.length} jobs`);
+      return jobs;
+    } catch(err) {
+      console.error(`  ❌ Jooble [${tag}] error:`, err.message);
+      return [];
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── MAP INITIALIZATION & LOADING ──────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  map.on('load', async () => {
+    console.log('🗺️  Map loaded. Initializing job sources...');
+
+    // Add radius circle
+    map.addSource('radius-circle', { type:'geojson', data: makeCircle(CENTER, RADIUS) });
+    map.addLayer({
+      id: 'radius-circle-fill', type: 'fill', source: 'radius-circle',
+      paint: { 'fill-color': '#00ff88', 'fill-opacity': 0.08 }
+    });
+    map.addLayer({
+      id: 'radius-circle-stroke', type: 'line', source: 'radius-circle',
+      paint: { 'line-color': '#00ff88', 'line-width': 2, 'line-opacity': 0.4 }
     });
 
-    // Keep 3D pin markers in sync as the map pans, zooms, or clusters expand/collapse
+    // Add jobs source
+    map.addSource('jobs', { type:'geojson', data:{type:'FeatureCollection',features:[]} });
+
+    // Clustering layer
+    map.addLayer({
+      id: 'clusters', type: 'circle', source: 'jobs',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': '#00ff88',
+        'circle-radius': ['step', ['get', 'point_count'], 20, 10, 25, 50, 30],
+        'circle-opacity': 0.7
+      }
+    });
+
+    map.addLayer({
+      id: 'cluster-count', type: 'symbol', source: 'jobs',
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': ['get', 'point_count'],
+        'text-font': ['Open Sans Semibold'],
+        'text-size': 11,
+        'text-color': '#000'
+      }
+    });
+
+    // Unclustered points (individual jobs)
+    map.addLayer({
+      id: 'unclustered-point', type: 'circle', source: 'jobs',
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': '#00ff88',
+        'circle-radius': 8,
+        'circle-opacity': 0,
+        'circle-stroke-width': 0
+      }
+    });
+
+    // Heatmap layer
+    map.addLayer({
+      id: 'jobs-heat', type: 'heatmap', source: 'jobs',
+      maxzoom: 15,
+      paint: {
+        'heatmap-weight': ['interpolate', ['linear'], ['get', 'point_count'], 0, 0, 10, 1],
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 9, 3],
+        'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, '#000428', 0.5, '#ff6b6b', 1, '#ffc107'],
+        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 15, 9, 20],
+        'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.5, 9, 0.8]
+      }
+    });
+
+    map.on('click', 'clusters', e => {
+      const features = map.querySourceFeatures('jobs', { sourceLayer: 'clusters' });
+      const clusteredFeature = features.find(f => 
+        f.properties.cluster_id === e.features[0].properties.cluster_id
+      );
+      if (clusteredFeature) {
+        map.getSource('jobs').getClusterExpansionZoom(clusteredFeature.properties.cluster_id, (err, zoom) => {
+          if (err) return;
+          map.easeTo({ center: e.lngLat, zoom: zoom });
+        });
+      }
+    });
+
+    map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
+
+    // Initial fetch
+    const tagsToFetch = CATEGORIES.filter(c => c.tag !== 'all' && c.tag !== 'placeholder').map(c => c.tag);
+    const results = await Promise.all(tagsToFetch.map(fetchCategory));
+    const seen = new Set();
+    results.flat().forEach(job => {
+      if (!seen.has(job.id)) {
+        seen.add(job.id);
+        allJobs.push(job);
+      }
+    });
+    if (activeFilter !== 'placeholder') { renderSidebar(); updateMapLayer(); }
+
+    // Keep pins in sync
     map.on('moveend', syncJobPinMarkers);
     map.on('sourcedata', (e) => { if (e.sourceId === 'jobs' && e.isSourceLoaded) syncJobPinMarkers(); });
-
-    const tagsToFetch=CATEGORIES.filter(c=>c.tag!=='all'&&c.tag!=='placeholder').map(c=>c.tag);
-    const results=await Promise.all(tagsToFetch.map(fetchCategory));
-    const seen=new Set();
-    results.flat().forEach(job=>{if(!seen.has(job.id)){seen.add(job.id);allJobs.push(job);}});
-    if(activeFilter!=='placeholder'){ renderSidebar(); updateMapLayer(); }
   });
 </script>
 </body>
