@@ -1040,7 +1040,20 @@
 
     const activeKeys = new Set();
 
-    activeMapJobs.forEach(job => {
+    // Cap visible pins to the closest N jobs relative to CENTER (the user's
+    // shared location, or their last ZIP search point) to keep the map from
+    // feeling cluttered even after dedup. The currently-focused job's pin is
+    // always kept regardless of this cap (see below) so opening a job never
+    // makes its own pin disappear.
+    const MAX_VISIBLE_PINS = 5;
+    const nearestJobs = [...activeMapJobs]
+      .sort((a, b) =>
+        haversineMiles(CENTER[1], CENTER[0], a.lat, a.lng) -
+        haversineMiles(CENTER[1], CENTER[0], b.lat, b.lng)
+      )
+      .slice(0, MAX_VISIBLE_PINS);
+
+    nearestJobs.forEach(job => {
       const key = `${job.lng.toFixed(6)},${job.lat.toFixed(6)}`;
       activeKeys.add(key);
       if (jobPinMarkers[key]) return; // already rendered, leave it alone
@@ -1050,8 +1063,10 @@
       }, key);
     });
 
-    // Always keep the currently-focused job's pin alive even if it somehow
-    // isn't in activeMapJobs yet (e.g. focused via search before filter list updated).
+    // Always keep the currently-focused job's pin alive, even if it falls outside
+    // the closest-5 cap above (so opening a job never makes its own pin disappear),
+    // or if it somehow isn't in activeMapJobs yet (e.g. focused via search before
+    // the filter list updated).
     if (currentJob) {
       const fkey = `${currentJob.lng.toFixed(6)},${currentJob.lat.toFixed(6)}`;
       activeKeys.add(fkey);
