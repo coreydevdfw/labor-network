@@ -147,14 +147,18 @@
     #commute-job-title { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; }
     #commute-job-company { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
     #commute-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-    #uber-link {
+    #ride-links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    #uber-link, #lyft-link {
       display: flex; align-items: center; justify-content: center; gap: 6px;
-      background: #000; border: 1px solid rgba(255,255,255,0.15);
       border-radius: 7px; padding: 7px; font-size: 11px; font-weight: 600;
       color: #fff; text-decoration: none; transition: all 0.15s;
     }
+    #uber-link { background: #000; border: 1px solid rgba(255,255,255,0.15); }
     #uber-link:hover { background: #1a1a1a; border-color: rgba(255,255,255,0.3); }
     #uber-link .uber-icon { font-size: 12px; }
+    #lyft-link { background: #ea0b8c; border: 1px solid rgba(255,255,255,0.15); }
+    #lyft-link:hover { background: #c8097a; border-color: rgba(255,255,255,0.3); }
+    #lyft-link .lyft-icon { font-size: 12px; }
     .commute-mode {
       background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 7px; padding: 6px 3px; text-align: center; cursor: pointer;
@@ -396,9 +400,14 @@
           <div class="mode-time loading" id="time-dart">—</div>
         </div>
       </div>
-      <a id="uber-link" href="#" target="_blank" rel="noopener">
-        <span class="uber-icon">🚕</span> Request a ride with Uber
-      </a>
+      <div id="ride-links">
+        <a id="uber-link" href="#" target="_blank" rel="noopener">
+          <span class="uber-icon">🚕</span> Uber
+        </a>
+        <a id="lyft-link" href="#" target="_blank" rel="noopener">
+          <span class="lyft-icon">🚖</span> Lyft
+        </a>
+      </div>
       <div id="traffic-badge" class="clear"><span class="dot"></span><span id="traffic-label">Checking traffic…</span></div>
     </div>
 
@@ -593,6 +602,9 @@
   document.getElementById('uber-link').addEventListener('click', () => {
     trackEvent('uber_click', { company: currentJob ? currentJob.company : null });
   });
+  document.getElementById('lyft-link').addEventListener('click', () => {
+    trackEvent('lyft_click', { company: currentJob ? currentJob.company : null });
+  });
   setTimeout(()=>{ if(!userLocated) document.getElementById('location-banner').classList.add('show'); }, 3000);
 
   // ── ZIP code search ──────────────────────────────────────────────────────
@@ -742,6 +754,16 @@
       `&dropoff[latitude]=${job.lat}&dropoff[longitude]=${job.lng}` +
       `&dropoff[nickname]=${encodeURIComponent(job.company || job.title)}`;
     document.getElementById('uber-link').href = uberUrl;
+
+    // Build Lyft Universal Link (same pickup/dropoff pattern as Uber above).
+    // Works without a Lyft developer Client ID — omitting `partner` just means
+    // no partner attribution on Lyft's side, but the deep link itself still works:
+    // opens the Lyft app if installed, otherwise falls back to ride.lyft.com.
+    const lyftUrl = `https://lyft.com/ride?id=lyft` +
+      `&pickup[latitude]=${CENTER[1]}&pickup[longitude]=${CENTER[0]}` +
+      `&destination[latitude]=${job.lat}&destination[longitude]=${job.lng}`;
+    document.getElementById('lyft-link').href = lyftUrl;
+
     currentDartDest = dest; // used by openDartTripPlanner()
 
     // Real nearest-DART-station calculation from local GTFS-derived data
@@ -1123,11 +1145,23 @@
 
   async function fetchCategory(tag) {
     const catParam=(tag==='all')?'':`&category=${tag}`;
-    try {
-      const res=await fetch(`https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=${APP_ID}&app_key=${APP_KEY}&where=Dallas,TX&results_per_page=50&distance=${RADIUS}${catParam}`);
-      const data=await res.json();
-      return (data.results||[]).filter(j=>j.latitude&&j.longitude).map(j=>({id:j.id,title:j.title,company:j.company?.display_name||'Unknown',url:j.redirect_url,lat:j.latitude,lng:j.longitude,category:tag==='all'?(j.category?.tag||'all'):tag}));
-    } catch(e){ return []; }
+    const parseResults = (data) =>
+      (data.results||[]).filter(j=>j.latitude&&j.longitude).map(j=>({id:j.id,title:j.title,company:j.company?.display_name||'Unknown',url:j.redirect_url,lat:j.latitude,lng:j.longitude,category:tag==='all'?(j.category?.tag||'all'):tag}));
+
+    // Fetch pages 1 and 2 (Adzuna's max is 50 results/page) to roughly double
+    // available listings per category. Each page is fetched independently so a
+    // failure on page 2 (e.g. rate limit) doesn't lose page 1's results.
+    const fetchPage = async (page) => {
+      try {
+        const res = await fetch(`https://api.adzuna.com/v1/api/jobs/us/search/${page}?app_id=${APP_ID}&app_key=${APP_KEY}&where=Dallas,TX&results_per_page=50&distance=${RADIUS}${catParam}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return parseResults(data);
+      } catch(e) { return []; }
+    };
+
+    const [page1, page2] = await Promise.all([fetchPage(1), fetchPage(2)]);
+    return [...page1, ...page2];
   }
 
   // ── Map load ──────────────────────────────────────────────────────────────
