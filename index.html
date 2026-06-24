@@ -513,6 +513,7 @@
   CATEGORIES.forEach(c => { colorMap[c.tag] = c.color; });
 
   let allJobs = [], activeFilter = 'placeholder', activePopup = null, activeCard = null;
+  let activeMapJobs = []; // currently filtered jobs shown on the map (used to sync pin markers reliably)
 
   // ── Map ───────────────────────────────────────────────────────────────────
   const map = new mapboxgl.Map({
@@ -972,6 +973,7 @@
 
   function updateMapLayer() {
     const jobs = activeFilter==='placeholder' ? [] : filteredJobs();
+    activeMapJobs = jobs; // keep latest filtered list for marker sync (see syncJobPinMarkers)
     const geojson={type:'FeatureCollection',features:jobs.map(job=>({type:'Feature',geometry:{type:'Point',coordinates:[job.lng,job.lat]},properties:{title:job.title,company:job.company,url:job.url,category:job.category,color:colorMap[job.category]||'#00ff88'}}))};
     if(map.getSource('jobs')) map.getSource('jobs').setData(geojson);
     syncJobPinMarkers();
@@ -994,16 +996,35 @@
 
   function syncJobPinMarkers() {
     if (!map.getSource('jobs') || !map.isStyleLoaded()) return;
-    let rendered;
-    try {
-      rendered = map.queryRenderedFeatures({ layers: ['unclustered-point'] });
-    } catch(e) { return; } // style/layer not ready yet
+
+    // 3D pins only make sense once individual points stop being clustered.
+    // The 'jobs' source uses clusterMaxZoom: 13 (see map init below), so above
+    // zoom 13 every point renders as 'unclustered-point' — that's when pins apply.
+    // This is a deterministic zoom check rather than a queryRenderedFeatures lookup,
+    // so it doesn't depend on render/camera state and won't flicker during flyTo.
+    const showPins = map.getZoom() > 13;
+    if (!showPins) {
+      Object.keys(jobPinMarkers).forEach(key => {
+        jobPinMarkers[key].remove();
+        delete jobPinMarkers[key];
+      });
+      return;
+    }
 
     const activeKeys = new Set();
 
-    // Always keep the currently-focused job's pin alive, even if queryRenderedFeatures
-    // momentarily misses it during a flyTo/pitch transition (tilted camera + tight zoom
-    // can push the point just outside the queried render bounds).
+    activeMapJobs.forEach(job => {
+      const key = `${job.lng.toFixed(6)},${job.lat.toFixed(6)}`;
+      activeKeys.add(key);
+      if (jobPinMarkers[key]) return; // already rendered, leave it alone
+      addJobPinMarker(job.lng, job.lat, {
+        title: job.title, company: job.company, url: job.url,
+        category: job.category, color: colorMap[job.category] || '#00ff88'
+      }, key);
+    });
+
+    // Always keep the currently-focused job's pin alive even if it somehow
+    // isn't in activeMapJobs yet (e.g. focused via search before filter list updated).
     if (currentJob) {
       const fkey = `${currentJob.lng.toFixed(6)},${currentJob.lat.toFixed(6)}`;
       activeKeys.add(fkey);
@@ -1016,15 +1037,8 @@
       }
     }
 
-    rendered.forEach(f => {
-      const [lng, lat] = f.geometry.coordinates;
-      const key = `${lng.toFixed(6)},${lat.toFixed(6)}`;
-      activeKeys.add(key);
-      if (jobPinMarkers[key]) return; // already rendered
-      addJobPinMarker(lng, lat, f.properties, key);
-    });
-
-    // Remove markers for points no longer rendered (clustered away or filtered out)
+    // Only remove markers for jobs that are no longer in the active filter at all
+    // (category changed, reset, etc.) — never remove based on camera/viewport state.
     Object.keys(jobPinMarkers).forEach(key => {
       if (!activeKeys.has(key)) {
         jobPinMarkers[key].remove();
