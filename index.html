@@ -558,9 +558,7 @@
     document.getElementById('job-count').textContent = '…';
     const tagsToFetch = CATEGORIES.filter(c=>c.tag!=='all'&&c.tag!=='placeholder').map(c=>c.tag);
     const results = await Promise.all(tagsToFetch.map(fetchCategory));
-    allJobs = [];
-    const seen = new Set();
-    results.flat().forEach(job=>{ if(!seen.has(job.id)){ seen.add(job.id); allJobs.push(job); } });
+    allJobs = dedupeJobs(results.flat());
     if (activeFilter !== 'placeholder') { renderSidebar(); updateMapLayer(); }
   }
 
@@ -994,6 +992,35 @@
     return map[tag] || '💼';
   }
 
+  // ── Dedup helper ─────────────────────────────────────────────────────
+  // Adzuna's category boundaries overlap (a single posting can legitimately
+  // surface under multiple categories, e.g. "Trades" + "Warehouse"), and
+  // employers sometimes repost the same opening multiple times. Both cases
+  // produce distinct Adzuna job IDs but identical or near-identical
+  // title + company + coordinates — which previously caused a visible stack
+  // of pins on the map at the same physical location. We dedupe on ID first
+  // (cheap, catches true duplicates), then on a normalized
+  // title+company+rounded-coordinate key (catches reposts/cross-category dupes).
+  function dedupeJobs(jobs) {
+    const seenIds = new Set();
+    const seenKeys = new Set();
+    const result = [];
+    jobs.forEach(job => {
+      if (seenIds.has(job.id)) return;
+      seenIds.add(job.id);
+      const normTitle = (job.title || '').trim().toLowerCase();
+      const normCompany = (job.company || '').trim().toLowerCase();
+      // ~0.005° ≈ 0.3mi — close enough to treat as "same location" for dedup purposes
+      const roundedLat = job.lat ? job.lat.toFixed(2) : '';
+      const roundedLng = job.lng ? job.lng.toFixed(2) : '';
+      const dupeKey = `${normTitle}|${normCompany}|${roundedLat}|${roundedLng}`;
+      if (seenKeys.has(dupeKey)) return;
+      seenKeys.add(dupeKey);
+      result.push(job);
+    });
+    return result;
+  }
+
   function syncJobPinMarkers() {
     if (!map.getSource('jobs') || !map.isStyleLoaded()) return;
 
@@ -1190,8 +1217,7 @@
 
     const tagsToFetch=CATEGORIES.filter(c=>c.tag!=='all'&&c.tag!=='placeholder').map(c=>c.tag);
     const results=await Promise.all(tagsToFetch.map(fetchCategory));
-    const seen=new Set();
-    results.flat().forEach(job=>{if(!seen.has(job.id)){seen.add(job.id);allJobs.push(job);}});
+    allJobs.push(...dedupeJobs(results.flat()));
     if(activeFilter!=='placeholder'){ renderSidebar(); updateMapLayer(); }
   });
 </script>
