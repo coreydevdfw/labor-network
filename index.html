@@ -24,146 +24,61 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', system-ui, sans-serif; background: #0a0a0a; overflow: hidden; padding-top: env(safe-area-inset-top); }
-
     #app { display: flex; height: 100dvh; width: 100vw; }
-
-    /* ── Sidebar ── */
-    #sidebar {
-      width: 320px; min-width: 320px; height: 100dvh;
-      background: #0f0f0f; border-right: 1px solid rgba(255,255,255,0.07);
-      display: flex; flex-direction: column; z-index: 20;
-    }
+    #sidebar { width: 320px; min-width: 320px; height: 100dvh; background: #0f0f0f; border-right: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; z-index: 20; }
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     #map { position: absolute; inset: 0; }
-
-    /* ── Vignette: soft radial-gradient fade, fixed to viewport — never tracks the map ── */
-    #vignette {
-      position: absolute; inset: 0; z-index: 2;
-      pointer-events: none;
-      background: radial-gradient(
-        ellipse 75% 75% at 50% 50%,
-        rgba(5,5,5,0) 0%,
-        rgba(5,5,5,0) 45%,
-        rgba(5,5,5,0.35) 70%,
-        rgba(5,5,5,0.75) 88%,
-        rgba(5,5,5,0.92) 100%
-      );
-    }
-
-    /* ── Sidebar header ── */
+    #vignette { position: absolute; inset: 0; z-index: 2; pointer-events: none; background: radial-gradient(ellipse 75% 75% at 50% 50%, rgba(5,5,5,0) 0%, rgba(5,5,5,0) 45%, rgba(5,5,5,0.35) 70%, rgba(5,5,5,0.75) 88%, rgba(5,5,5,0.92) 100%); }
     #sidebar-header-wrap { flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-    #sidebar-header {
-      padding: 16px 14px 10px;
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    }
+    #sidebar-header { padding: 16px 14px 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .logo { font-size: 15px; font-weight: 800; color: #00ff88; letter-spacing: 0.05em; }
     .tagline { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 1px; }
-
     #zip-row { padding: 0 14px 12px; }
-    #zip-toggle-link {
-      background: none; border: none; color: rgba(255,255,255,0.35);
-      font-size: 11px; font-family: inherit; cursor: pointer; padding: 0;
-      text-decoration: underline; text-decoration-color: rgba(255,255,255,0.2);
-    }
+    #zip-toggle-link { background: none; border: none; color: rgba(255,255,255,0.35); font-size: 11px; font-family: inherit; cursor: pointer; padding: 0; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.2); }
     #zip-toggle-link:hover { color: rgba(255,255,255,0.55); }
     #zip-entry { display: flex; gap: 6px; align-items: center; }
-    #zip-input {
-      flex: 1; min-width: 0; background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 7px;
-      padding: 7px 10px; color: #fff; font-size: 12px; font-family: inherit;
-      outline: none;
-    }
+    #zip-input { flex: 1; min-width: 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; padding: 7px 10px; color: #fff; font-size: 12px; font-family: inherit; outline: none; }
     #zip-input:focus { border-color: rgba(0,255,136,0.4); }
-    #zip-go-btn {
-      background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.3);
-      color: #00ff88; font-size: 11px; font-weight: 700; font-family: inherit;
-      border-radius: 7px; padding: 7px 12px; cursor: pointer; flex-shrink: 0;
-    }
+    #zip-go-btn { background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.3); color: #00ff88; font-size: 11px; font-weight: 700; font-family: inherit; border-radius: 7px; padding: 7px 12px; cursor: pointer; flex-shrink: 0; }
     #zip-go-btn:hover { background: rgba(0,255,136,0.2); }
-    #zip-cancel-btn {
-      background: none; border: none; color: rgba(255,255,255,0.3);
-      font-size: 13px; cursor: pointer; padding: 4px 6px; flex-shrink: 0;
-    }
+    #zip-cancel-btn { background: none; border: none; color: rgba(255,255,255,0.3); font-size: 13px; cursor: pointer; padding: 4px 6px; flex-shrink: 0; }
     #zip-status { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 6px; line-height: 1.4; }
     #zip-status.error { color: #ff6b6b; }
     #zip-status.success { color: #00ff88; }
-
-    #locate-btn {
-      display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
-      color: #00ff88; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.25);
-      border-radius: 8px; padding: 6px 10px; cursor: pointer; transition: all 0.18s;
-      white-space: nowrap; flex-shrink: 0; font-family: inherit;
-    }
+    #locate-btn { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #00ff88; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.25); border-radius: 8px; padding: 6px 10px; cursor: pointer; transition: all 0.18s; white-space: nowrap; flex-shrink: 0; font-family: inherit; }
     #locate-btn:hover { background: rgba(0,255,136,0.16); }
     #locate-btn.located { color: #fff; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); }
     #locate-btn.locating { opacity: 0.5; pointer-events: none; }
     #locate-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
-
-    /* ── Filter ── */
     #filter-wrap { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; display: flex; gap: 8px; align-items: center; }
     #filter-select-wrap { flex: 1; position: relative; display: flex; align-items: center; }
-    #view-toggle {
-      display: flex; flex-shrink: 0; background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;
-    }
-    #view-toggle button {
-      border: none; background: transparent; color: rgba(255,255,255,0.4);
-      font-size: 10px; font-weight: 600; padding: 9px 8px; cursor: pointer;
-      font-family: inherit; transition: all 0.15s; display: flex; align-items: center; gap: 3px;
-      white-space: nowrap;
-    }
+    #view-toggle { display: flex; flex-shrink: 0; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; }
+    #view-toggle button { border: none; background: transparent; color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 600; padding: 9px 8px; cursor: pointer; font-family: inherit; transition: all 0.15s; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
     #view-toggle button.active { background: rgba(0,255,136,0.14); color: #00ff88; }
     #view-toggle button svg { width: 13px; height: 13px; }
-
-    #reset-filter-btn {
-      flex-shrink: 0; width: 34px; height: 34px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; color: rgba(255,255,255,0.4); cursor: pointer;
-      transition: all 0.15s;
-    }
+    #reset-filter-btn { flex-shrink: 0; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.4); cursor: pointer; transition: all 0.15s; }
     #reset-filter-btn:hover { background: rgba(255,107,107,0.1); border-color: rgba(255,107,107,0.3); color: #ff6b6b; }
     #reset-filter-btn svg { width: 14px; height: 14px; }
     #reset-filter-btn:disabled { opacity: 0.3; pointer-events: none; }
     #cat-dot { position: absolute; left: 10px; width: 8px; height: 8px; border-radius: 50%; pointer-events: none; transition: background 0.2s; z-index: 1; }
     #filter-select-wrap::after { content: '▾'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); font-size: 11px; pointer-events: none; }
-    #category-select {
-      width: 100%; appearance: none; -webkit-appearance: none;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; padding: 9px 24px 9px 26px; color: #fff; font-size: 12px;
-      font-weight: 600; cursor: pointer; outline: none; font-family: inherit;
-      text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
-      min-width: 0;
-    }
+    #category-select { width: 100%; appearance: none; -webkit-appearance: none; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 9px 24px 9px 26px; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; outline: none; font-family: inherit; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; min-width: 0; }
     #category-select:focus { border-color: rgba(0,255,136,0.4); }
     #category-select option { background: #1a1a1a; color: #fff; }
-
-    /* ── Commute panel ── */
-    #commute-panel {
-      flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06);
-      background: #0c0c0c; display: none; flex-direction: column; padding: 12px 14px; gap: 10px;
-    }
+    #commute-panel { flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06); background: #0c0c0c; display: none; flex-direction: column; padding: 12px 14px; gap: 10px; }
     #commute-panel.visible { display: flex; }
     #commute-job-title { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; }
     #commute-job-company { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
     #commute-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
     #ride-links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    #uber-link, #lyft-link {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      border-radius: 7px; padding: 7px; font-size: 11px; font-weight: 600;
-      color: #fff; text-decoration: none; transition: all 0.15s;
-    }
+    #uber-link, #lyft-link { display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 7px; padding: 7px; font-size: 11px; font-weight: 600; color: #fff; text-decoration: none; transition: all 0.15s; }
     #uber-link { background: #000; border: 1px solid rgba(255,255,255,0.15); }
     #uber-link:hover { background: #1a1a1a; border-color: rgba(255,255,255,0.3); }
     #uber-link .uber-icon { font-size: 12px; }
     #lyft-link { background: #ea0b8c; border: 1px solid rgba(255,255,255,0.15); }
     #lyft-link:hover { background: #c8097a; border-color: rgba(255,255,255,0.3); }
     #lyft-link .lyft-icon { font-size: 12px; }
-    .commute-mode {
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 7px; padding: 6px 3px; text-align: center; cursor: pointer;
-      transition: all 0.15s; min-width: 0;
-    }
+    .commute-mode { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; padding: 6px 3px; text-align: center; cursor: pointer; transition: all 0.15s; min-width: 0; }
     .commute-mode:hover { background: rgba(255,255,255,0.08); }
     .commute-mode.active { border-color: rgba(0,255,136,0.5); background: rgba(0,255,136,0.08); }
     .commute-mode .mode-icon { font-size: 14px; margin-bottom: 2px; }
@@ -172,11 +87,7 @@
     .commute-mode .mode-time.loading { color: rgba(255,255,255,0.3); font-size: 9px; }
     .commute-mode .mode-time.unrealistic { color: rgba(255,255,255,0.3); font-weight: 500; font-size: 10px; }
     .commute-mode .mode-time.dart-distance { font-size: 9px; font-weight: 600; white-space: normal; line-height: 1.25; word-break: break-word; }
-    #traffic-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 10px; padding: 3px 9px; border-radius: 10px; font-weight: 600;
-      align-self: flex-start;
-    }
+    #traffic-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; padding: 3px 9px; border-radius: 10px; font-weight: 600; align-self: flex-start; }
     #traffic-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
     #traffic-badge.clear { background: rgba(0,255,136,0.12); color: #00ff88; }
     #traffic-badge.clear .dot { background: #00ff88; }
@@ -185,35 +96,23 @@
     #traffic-badge.heavy { background: rgba(255,107,107,0.15); color: #ff6b6b; }
     #traffic-badge.heavy .dot { background: #ff6b6b; }
     #commute-close { position: absolute; right: 12px; top: 12px; background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 16px; padding: 2px; }
-
-    /* ── List section ── */
     #list-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     #count-bar { padding: 8px 14px 6px; font-size: 11px; color: rgba(255,255,255,0.35); flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
     #count-bar strong { color: #fff; font-weight: 700; }
     #job-list { flex: 1; overflow-y: auto; padding: 8px; }
     #job-list::-webkit-scrollbar { width: 3px; }
     #job-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-
-    /* ── Pre-select prompt ── */
     #pre-select { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; text-align: center; gap: 12px; }
     .ps-icon { font-size: 28px; opacity: 0.4; }
     .ps-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.6); }
     .ps-sub { font-size: 11px; color: rgba(255,255,255,0.25); line-height: 1.6; }
-
-    .job-card {
-      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 10px; padding: 11px 13px; margin-bottom: 6px;
-      cursor: pointer; transition: all 0.15s; border-left: 3px solid;
-    }
+    .job-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 11px 13px; margin-bottom: 6px; cursor: pointer; transition: all 0.15s; border-left: 3px solid; }
     .job-card:hover { background: rgba(255,255,255,0.06); transform: translateX(2px); }
     .job-card.active { background: rgba(255,255,255,0.08); }
     .card-title { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 3px; line-height: 1.35; }
     .card-company { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
     .card-footer { display: flex; align-items: center; justify-content: space-between; }
-    .card-drivetime {
-      display: flex; align-items: center; gap: 5px; margin-bottom: 6px;
-      font-size: 11px; color: rgba(255,255,255,0.5);
-    }
+    .card-drivetime { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; font-size: 11px; color: rgba(255,255,255,0.5); }
     .dt-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
     .dt-dot.clear { background: #00ff88; }
     .dt-dot.moderate { background: #ffc107; }
@@ -225,102 +124,37 @@
     #loading-state { text-align:center; padding:32px 20px; color:rgba(255,255,255,0.3); font-size:12px; display:none; }
     .pulse { animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%,100%{opacity:0.3}50%{opacity:0.8} }
-
-    /* ── Map overlays ── */
     #zoom-hint { position:absolute; bottom:28px; right:12px; z-index:6; background:rgba(10,10,10,0.7); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:5px 10px; color:rgba(255,255,255,0.3); font-size:11px; transition:opacity 0.4s; pointer-events:none; }
-    #heatmap-caption {
-      position:absolute; bottom:28px; left:12px; z-index:6;
-      background:rgba(10,10,10,0.75); border:1px solid rgba(255,107,107,0.25);
-      border-radius:8px; padding:7px 11px; color:rgba(255,255,255,0.55);
-      font-size:11px; line-height:1.4; max-width:200px;
-      opacity:0; pointer-events:none; transition:opacity 0.3s;
-    }
+    #heatmap-caption { position:absolute; bottom:28px; left:12px; z-index:6; background:rgba(10,10,10,0.75); border:1px solid rgba(255,107,107,0.25); border-radius:8px; padding:7px 11px; color:rgba(255,255,255,0.55); font-size:11px; line-height:1.4; max-width:200px; opacity:0; pointer-events:none; transition:opacity 0.3s; }
     #heatmap-caption.show { opacity:1; }
     #heatmap-caption strong { color:#fff; }
     #location-banner { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); z-index:8; background:rgba(15,15,15,0.95); border:1px solid rgba(0,255,136,0.3); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(255,255,255,0.7); box-shadow:0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:opacity 0.4s; max-width: calc(100vw - 24px); width: max-content; }
     #location-banner.show { opacity:1; pointer-events:auto; }
     #location-banner button { font-size:11px; font-weight:700; color:#0a0a0a; background:#00ff88; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-family:inherit; flex-shrink: 0; }
-    @media (max-width: 640px) {
-      #location-banner { bottom: 12px; left: 12px; right: 12px; transform: none; width: auto; max-width: none; font-size: 11px; }
-    }
-
-    /* ── Mapbox attribution — required by ToS, restyled to blend in ── */
+    @media (max-width: 640px) { #location-banner { bottom: 12px; left: 12px; right: 12px; transform: none; width: auto; max-width: none; font-size: 11px; } }
     .mapboxgl-ctrl-logo { opacity: 0.35; filter: grayscale(1) brightness(1.8); }
     .mapboxgl-ctrl-attrib { background: rgba(10,10,10,0.55) !important; border-radius: 6px 0 0 0; }
     .mapboxgl-ctrl-attrib a { color: rgba(255,255,255,0.4) !important; font-size: 10px !important; }
     .mapboxgl-ctrl-attrib-button { filter: invert(1) brightness(0.7); }
     .mapboxgl-ctrl-bottom-left { z-index: 3; }
-
-    /* ── 3D animated job pin marker (DOM-based, synced to unclustered points only) ── */
-    .job-pin-3d {
-      width: 32px; height: 40px; position: relative; cursor: pointer;
-      transform-origin: bottom center;
-      animation: pin3dDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, pin3dBob 2.4s ease-in-out 0.4s infinite;
-    }
-    .job-pin-3d .pin3d-body {
-      width: 27px; height: 27px; border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg); position: absolute; top: 1px; left: 2.5px;
-      border: 1.5px solid rgba(255,255,255,0.85);
-      box-shadow: 0 4px 9px rgba(0,0,0,0.6), inset 0 -4px 6px rgba(0,0,0,0.35), inset 0 2px 5px rgba(255,255,255,0.55);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .job-pin-3d .pin3d-emoji {
-      transform: rotate(45deg); font-size: 14px; line-height: 1; user-select: none;
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
-      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
-    }
-    .job-pin-3d .pin3d-shadow {
-      position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
-      width: 15px; height: 5px; background: rgba(0,0,0,0.45); border-radius: 50%;
-      filter: blur(2px);
-    }
-    .job-pin-3d:hover .pin3d-body {
-      transform: rotate(-45deg) scale(1.22) translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.65), inset 0 -4px 6px rgba(0,0,0,0.35), inset 0 2px 5px rgba(255,255,255,0.6);
-      border-color: #fff;
-    }
-    @keyframes pin3dDrop {
-      0%   { transform: translateY(-26px) scale(0.4); opacity: 0; }
-      65%  { transform: translateY(2px) scale(1.1); opacity: 1; }
-      100% { transform: translateY(0) scale(1); opacity: 1; }
-    }
-    @keyframes pin3dBob {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-3px); }
-    }
-
-    /* ── User location marker ── */
-    .user-location-marker {
-      width: 18px; height: 18px; position: relative;
-    }
-    .user-location-marker .dot {
-      width: 14px; height: 14px; background: #00ff88; border-radius: 50%;
-      border: 2.5px solid #fff; box-shadow: 0 0 0 2px rgba(0,255,136,0.4), 0 2px 8px rgba(0,0,0,0.5);
-      position: absolute; top: 2px; left: 2px; z-index: 2;
-    }
-    .user-location-marker .pulse-ring {
-      width: 18px; height: 18px; background: rgba(0,255,136,0.35);
-      border-radius: 50%; position: absolute; top: 0; left: 0;
-      animation: locationPulse 2s infinite ease-out;
-    }
-    @keyframes locationPulse {
-      0%   { transform: scale(1);   opacity: 0.7; }
-      100% { transform: scale(3.2); opacity: 0; }
-    }
+    .job-pin-3d { width: 32px; height: 40px; position: relative; cursor: pointer; transform-origin: bottom center; animation: pin3dDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, pin3dBob 2.4s ease-in-out 0.4s infinite; }
+    .job-pin-3d .pin3d-body { width: 27px; height: 27px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); position: absolute; top: 1px; left: 2.5px; border: 1.5px solid rgba(255,255,255,0.85); box-shadow: 0 4px 9px rgba(0,0,0,0.6), inset 0 -4px 6px rgba(0,0,0,0.35), inset 0 2px 5px rgba(255,255,255,0.55); display: flex; align-items: center; justify-content: center; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .job-pin-3d .pin3d-emoji { transform: rotate(45deg); font-size: 14px; line-height: 1; user-select: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35)); }
+    .job-pin-3d .pin3d-shadow { position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); width: 15px; height: 5px; background: rgba(0,0,0,0.45); border-radius: 50%; filter: blur(2px); }
+    .job-pin-3d:hover .pin3d-body { transform: rotate(-45deg) scale(1.22) translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.65), inset 0 -4px 6px rgba(0,0,0,0.35), inset 0 2px 5px rgba(255,255,255,0.6); border-color: #fff; }
+    @keyframes pin3dDrop { 0% { transform: translateY(-26px) scale(0.4); opacity: 0; } 65% { transform: translateY(2px) scale(1.1); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes pin3dBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    .user-location-marker { width: 18px; height: 18px; position: relative; }
+    .user-location-marker .dot { width: 14px; height: 14px; background: #00ff88; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 0 0 2px rgba(0,255,136,0.4), 0 2px 8px rgba(0,0,0,0.5); position: absolute; top: 2px; left: 2px; z-index: 2; }
+    .user-location-marker .pulse-ring { width: 18px; height: 18px; background: rgba(0,255,136,0.35); border-radius: 50%; position: absolute; top: 0; left: 0; animation: locationPulse 2s infinite ease-out; }
+    @keyframes locationPulse { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(3.2); opacity: 0; } }
     .mapboxgl-popup-content { background:#111!important; border:1px solid rgba(0,255,136,0.25)!important; border-radius:10px!important; padding:14px 16px!important; box-shadow:0 8px 32px rgba(0,0,0,0.6)!important; min-width:200px; }
     .mapboxgl-popup-tip { display:none!important; }
     .mapboxgl-popup-close-button { color:rgba(255,255,255,0.4)!important; font-size:16px!important; top:6px!important; right:8px!important; }
     .popup-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:4px; line-height:1.3; padding-right:16px; }
     .popup-company { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:10px; }
     .popup-apply { display:inline-block; font-size:12px; font-weight:600; color:#0a0a0a; background:#00ff88; border-radius:6px; padding:5px 12px; text-decoration:none; }
-
-    @media (max-width:640px) {
-      #app { flex-direction:column; }
-      #sidebar { width:100%; min-width:unset; height:auto; max-height:50dvh; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); }
-      #map-wrap { flex:1; min-height:0; }
-    }
+    @media (max-width:640px) { #app { flex-direction:column; } #sidebar { width:100%; min-width:unset; height:auto; max-height:50dvh; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); } #map-wrap { flex:1; min-height:0; } }
   </style>
 </head>
 <body>
@@ -371,7 +205,6 @@
       </div>
     </div>
 
-    <!-- Commute panel — shown when a job is focused -->
     <div id="commute-panel" style="position:relative">
       <button id="commute-close" onclick="closeCommute()">✕</button>
       <div>
@@ -450,16 +283,24 @@
     - Wire in Jooble as second job source once JOOBLE_KEY is populated.
     - USPTO TESS check still pending on any shortlisted brand name before
       committing to wordmark/logo direction.
+    - Lyft app is "pending approval" in the Lyft Developer Portal as of
+      this deploy — partner ID is wired in below, but Lyft says to reach
+      out to a Lyft rep to fully enable the app. Until approved, the
+      ride-link behavior may not change. Revisit once approved.
   ──────────────────────────────────────────────────────────────────────── */
 
   mapboxgl.accessToken = 'pk.eyJ1IjoiY29yZXlkZXZkZnciLCJhIjoiY21xaHVvanM2MDE3bDJ0cHB4NTF4andpdiJ9.7zXPq8gI54J5-OEEh69E5w';
   const APP_ID  = 'b7919541';
   const APP_KEY = '3f2d6edcdeb9e34e2532ad7e64f6f7b2';
   const JOOBLE_KEY = '793b9078-aa0b-4215-bb1a-0cd3d05d245f';
+  // Lyft Developer Portal Client ID (Labor Network app). Required for Lyft's
+  // Universal Links to resolve pickup/destination correctly — without it,
+  // Lyft silently drops the params and falls back to its generic homepage
+  // instead of a pre-filled ride request. Note: app shows "pending approval"
+  // in the Lyft dashboard as of this deploy; see backlog note above.
+  const LYFT_CLIENT_ID = 'kerGY1z56iEW';
 
   // ── ANALYTICS HELPER ─────────────────────────────────────────────────
-  // Wraps gtag so a missing/blocked GA script (ad blockers, etc.) never
-  // breaks the app. Logs to console for local debugging.
   function trackEvent(name, params = {}) {
     try {
       if (typeof gtag === 'function') {
@@ -469,18 +310,15 @@
     } catch (e) {
       console.warn('Analytics event failed:', name, e);
     }
-  } // ← paste your Jooble API key here once approved, e.g. 'abc123xyz'
+  }
   let CENTER    = [-96.7970, 33.0137];
   let userLocated = false;
   const RADIUS  = 25;
   let currentJob = null;
   let currentDartDest = null;
   let dartStations = [];
-  let nearestDartStation = null; // set per-job in loadCommute
+  let nearestDartStation = null;
 
-  // Load real DART station data once (extracted from DART's published GTFS feed,
-  // dart.org/about/about-dart/fixed-route-schedule). 90 named rail/streetcar
-  // stations with merged platform coordinates — small static file, no API calls.
   fetch('dart-stations.json')
     .then(res => res.json())
     .then(data => { dartStations = data; })
@@ -504,7 +342,6 @@
     return { ...nearest, distance: minDist };
   }
 
-
   let activeMode = 'driving';
 
   const CATEGORIES = [
@@ -522,9 +359,8 @@
   CATEGORIES.forEach(c => { colorMap[c.tag] = c.color; });
 
   let allJobs = [], activeFilter = 'placeholder', activePopup = null, activeCard = null;
-  let activeMapJobs = []; // currently filtered jobs shown on the map (used to sync pin markers reliably)
+  let activeMapJobs = [];
 
-  // ── Map ───────────────────────────────────────────────────────────────────
   const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/dark-v11',
@@ -532,9 +368,6 @@
   });
   map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right');
 
-
-
-  // ── Circle ────────────────────────────────────────────────────────────────
   function makeCircle(center, radiusMiles, steps=64) {
     const coords=[], R=3958.8, lat=center[1]*Math.PI/180;
     for(let i=0;i<=steps;i++){
@@ -547,7 +380,6 @@
     if(map.getSource('radius-circle')) map.getSource('radius-circle').setData(makeCircle(CENTER,RADIUS));
   }
 
-  // ── Location ──────────────────────────────────────────────────────────────
   let userMarker = null;
 
   function placeUserMarker(coords) {
@@ -579,7 +411,7 @@
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Locating…`;
     navigator.geolocation.getCurrentPosition(async pos => {
       CENTER = [pos.coords.longitude, pos.coords.latitude];
-      const accuracy = Math.round(pos.coords.accuracy); // meters
+      const accuracy = Math.round(pos.coords.accuracy);
       userLocated = true;
       map.flyTo({ center: CENTER, zoom: 13, pitch: 45, duration: 1400 });
       updateCircle();
@@ -607,10 +439,6 @@
   });
   setTimeout(()=>{ if(!userLocated) document.getElementById('location-banner').classList.add('show'); }, 3000);
 
-  // ── ZIP code search ──────────────────────────────────────────────────────
-  // Additive alternate location path. Must never silently override an
-  // already-granted GPS location — if GPS is active, ZIP requires explicit
-  // confirmation before replacing CENTER.
   const zipToggleLink = document.getElementById('zip-toggle-link');
   const zipEntry = document.getElementById('zip-entry');
   const zipInput = document.getElementById('zip-input');
@@ -639,7 +467,7 @@
     const res = await fetch(url);
     const data = await res.json();
     if (!data.features || !data.features.length) return null;
-    return data.features[0].center; // [lng, lat]
+    return data.features[0].center;
   }
 
   async function submitZip() {
@@ -650,8 +478,6 @@
       return;
     }
 
-    // If GPS location is already active, require explicit confirmation —
-    // ZIP must never silently override a real, already-granted location.
     if (userLocated) {
       const confirmed = confirm(
         `You're currently using your shared location for the most accurate results.\n\n` +
@@ -671,10 +497,9 @@
     }
 
     CENTER = coords;
-    userLocated = false; // ZIP is an approximate area, not a precise GPS fix
+    userLocated = false;
     routeCache = {};
 
-    // Remove the precise "you are here" marker — it no longer applies to a ZIP-based area
     if (userMarker) { userMarker.remove(); userMarker = null; }
 
     map.flyTo({ center: CENTER, zoom: 12, pitch: 40, duration: 1400 });
@@ -692,7 +517,6 @@
   }
   setTimeout(()=>document.getElementById('location-banner').classList.remove('show'), 9000);
 
-  // ── Commute / Directions ──────────────────────────────────────────────────
   let routeCache = {};
 
   async function fetchRoute(mode, destination) {
@@ -739,7 +563,6 @@
     document.getElementById('commute-job-company').textContent = job.company;
     document.getElementById('commute-panel').classList.add('visible');
 
-    // Reset times
     ['driving','walking','cycling','dart'].forEach(m => {
       const el = document.getElementById(`time-${m}`);
       el.textContent = '…'; el.className = 'mode-time loading';
@@ -748,25 +571,24 @@
 
     const dest = [job.lng, job.lat];
 
-    // Build Uber deep-link: pickup = CENTER (user location or default DFW center), dropoff = job
     const uberUrl = `https://m.uber.com/ul/?action=setPickup` +
       `&pickup[latitude]=${CENTER[1]}&pickup[longitude]=${CENTER[0]}` +
       `&dropoff[latitude]=${job.lat}&dropoff[longitude]=${job.lng}` +
       `&dropoff[nickname]=${encodeURIComponent(job.company || job.title)}`;
     document.getElementById('uber-link').href = uberUrl;
 
-    // Build Lyft Universal Link (same pickup/dropoff pattern as Uber above).
-    // Works without a Lyft developer Client ID — omitting `partner` just means
-    // no partner attribution on Lyft's side, but the deep link itself still works:
-    // opens the Lyft app if installed, otherwise falls back to ride.lyft.com.
+    // Lyft Universal Link — now includes the registered `partner` (Client ID)
+    // param. Without it, Lyft's universal link handler silently drops
+    // pickup/destination and falls back to the generic homepage instead of
+    // a pre-filled request.
     const lyftUrl = `https://lyft.com/ride?id=lyft` +
       `&pickup[latitude]=${CENTER[1]}&pickup[longitude]=${CENTER[0]}` +
+      `&partner=${LYFT_CLIENT_ID}` +
       `&destination[latitude]=${job.lat}&destination[longitude]=${job.lng}`;
     document.getElementById('lyft-link').href = lyftUrl;
 
-    currentDartDest = dest; // used by openDartTripPlanner()
+    currentDartDest = dest;
 
-    // Real nearest-DART-station calculation from local GTFS-derived data
     nearestDartStation = findNearestDartStation(job.lat, job.lng);
     const dartEl = document.getElementById('time-dart');
     if (nearestDartStation) {
@@ -783,7 +605,6 @@
       dartEl.textContent = 'No data';
     }
 
-    // Fetch all three modes
     const [driveRoute, walkRoute, bikeRoute] = await Promise.all([
       fetchRoute('driving', dest),
       fetchRoute('walking', dest),
@@ -795,7 +616,6 @@
       el.textContent = formatTime(driveRoute.duration);
       el.className = 'mode-time';
 
-      // Traffic from driving route
       const trafficLevel = trafficFromCongestion(driveRoute.legs);
       const badge = document.getElementById('traffic-badge');
       badge.className = `traffic-badge ${trafficLevel}`;
@@ -804,8 +624,6 @@
     if (walkRoute) {
       const el = document.getElementById('time-walking');
       el.textContent = formatTime(walkRoute.duration);
-      // De-emphasize unrealistic walk times (45+ min) rather than show them
-      // with the same visual weight as a genuinely viable option.
       el.className = walkRoute.duration > 2700 ? 'mode-time unrealistic' : 'mode-time';
     }
     if (bikeRoute) {
@@ -814,7 +632,6 @@
       el.className = bikeRoute.duration > 3600 ? 'mode-time unrealistic' : 'mode-time';
     }
 
-    // Draw active mode route
     drawRoute(activeMode, dest);
   }
 
@@ -848,13 +665,6 @@
     if (currentJob) drawRoute(mode, [currentJob.lng, currentJob.lat]);
   }
 
-  // DART blocks automated access to their site, so the exact trip-planner query
-  // parameter format can't be verified from here. Rather than risk silently
-  // Opens DART's main site. We deliberately don't guess a deep-link query
-  // format since DART blocks automated verification of their trip-planner
-  // page — better to reliably open a real, working page than risk another
-  // broken link. The real value here is the nearest-station distance shown
-  // on the card itself, computed locally from DART's published GTFS data.
   function openDartTripPlanner() {
     window.open('https://www.dart.org/', '_blank', 'noopener');
   }
@@ -869,7 +679,6 @@
     if (activePopup) { activePopup.remove(); activePopup = null; }
   }
 
-  // ── Dropdown ──────────────────────────────────────────────────────────────
   const sel = document.getElementById('category-select');
   const dot = document.getElementById('cat-dot');
   CATEGORIES.forEach(cat => {
@@ -895,7 +704,6 @@
     trackEvent('filter_used', { category: activeFilter });
   });
 
-  // ── Reset filters ─────────────────────────────────────────────────────────
   document.getElementById('reset-filter-btn').addEventListener('click', () => {
     sel.value = 'placeholder';
     activeFilter = 'placeholder';
@@ -909,7 +717,6 @@
   });
   document.getElementById('reset-filter-btn').disabled = true;
 
-  // ── View toggle: pins/clusters vs heatmap ───────────────────────────────────
   let viewMode = 'pins';
   const pinsBtn = document.getElementById('toggle-pins');
   const heatBtn = document.getElementById('toggle-heatmap');
@@ -930,7 +737,6 @@
   pinsBtn.addEventListener('click', () => setViewMode('pins'));
   heatBtn.addEventListener('click', () => setViewMode('heatmap'));
 
-  // ── Sidebar ───────────────────────────────────────────────────────────────
   function filteredJobs() {
     return (activeFilter==='all'||activeFilter==='placeholder') ? allJobs : allJobs.filter(j=>j.category===activeFilter);
   }
@@ -954,12 +760,9 @@
     loadCardDriveTimes(jobs);
   }
 
-  // ── Lazy, batched drive-time + traffic fetch for visible job cards ─────────
-  // Limits concurrent requests to avoid hammering the Directions API when a
-  // category has many results. Reuses the same routeCache as the commute panel.
   async function loadCardDriveTimes(jobs) {
     const BATCH_SIZE = 8;
-    const MAX_CARDS = 40; // safety cap — don't fetch traffic for huge unfiltered lists
+    const MAX_CARDS = 40;
     const targets = jobs.slice(0, MAX_CARDS);
 
     for (let i = 0; i < targets.length; i += BATCH_SIZE) {
@@ -967,9 +770,9 @@
       await Promise.all(batch.map(async (job, batchIdx) => {
         const idx = i + batchIdx;
         const el = document.getElementById(`drivetime-${idx}`);
-        if (!el) return; // card may have been re-rendered (filter changed) mid-fetch
+        if (!el) return;
         const route = await fetchRoute('driving', [job.lng, job.lat]);
-        const el2 = document.getElementById(`drivetime-${idx}`); // re-check after async gap
+        const el2 = document.getElementById(`drivetime-${idx}`);
         if (!el2 || !route) return;
         const level = trafficFromCongestion(route.legs);
         el2.querySelector('.dt-dot').className = `dt-dot ${level}`;
@@ -993,16 +796,13 @@
 
   function updateMapLayer() {
     const jobs = activeFilter==='placeholder' ? [] : filteredJobs();
-    activeMapJobs = jobs; // keep latest filtered list for marker sync (see syncJobPinMarkers)
+    activeMapJobs = jobs;
     const geojson={type:'FeatureCollection',features:jobs.map(job=>({type:'Feature',geometry:{type:'Point',coordinates:[job.lng,job.lat]},properties:{title:job.title,company:job.company,url:job.url,category:job.category,color:colorMap[job.category]||'#00ff88'}}))};
     if(map.getSource('jobs')) map.getSource('jobs').setData(geojson);
     syncJobPinMarkers();
   }
 
-  // ── 3D pin marker sync ───────────────────────────────────────────────────
-  // Renders animated DOM pins only for points NOT currently absorbed into a cluster.
-  // The underlying circle layer stays invisible and handles click/hover hit-detection.
-  let jobPinMarkers = {}; // key: "lng,lat" -> mapboxgl.Marker
+  let jobPinMarkers = {};
 
   function categoryEmoji(tag) {
     const map = {
@@ -1014,15 +814,6 @@
     return map[tag] || '💼';
   }
 
-  // ── Dedup helper ─────────────────────────────────────────────────────
-  // Adzuna's category boundaries overlap (a single posting can legitimately
-  // surface under multiple categories, e.g. "Trades" + "Warehouse"), and
-  // employers sometimes repost the same opening multiple times. Both cases
-  // produce distinct Adzuna job IDs but identical or near-identical
-  // title + company + coordinates — which previously caused a visible stack
-  // of pins on the map at the same physical location. We dedupe on ID first
-  // (cheap, catches true duplicates), then on a normalized
-  // title+company+rounded-coordinate key (catches reposts/cross-category dupes).
   function dedupeJobs(jobs) {
     const seenIds = new Set();
     const seenKeys = new Set();
@@ -1032,7 +823,6 @@
       seenIds.add(job.id);
       const normTitle = (job.title || '').trim().toLowerCase();
       const normCompany = (job.company || '').trim().toLowerCase();
-      // ~0.005° ≈ 0.3mi — close enough to treat as "same location" for dedup purposes
       const roundedLat = job.lat ? job.lat.toFixed(2) : '';
       const roundedLng = job.lng ? job.lng.toFixed(2) : '';
       const dupeKey = `${normTitle}|${normCompany}|${roundedLat}|${roundedLng}`;
@@ -1046,11 +836,6 @@
   function syncJobPinMarkers() {
     if (!map.getSource('jobs') || !map.isStyleLoaded()) return;
 
-    // 3D pins only render once you're zoomed in enough to avoid clutter.
-    // The 'jobs' source stops clustering at zoom 13 (clusterMaxZoom), but we wait
-    // until zoom 15 to show individual 3D pins so the map isn't flooded with markers
-    // the moment clustering ends. Between 13–15, jobs are still clickable via the
-    // invisible 'unclustered-point' circle layer — just without the pin decoration.
     const showPins = map.getZoom() > 15;
     if (!showPins) {
       Object.keys(jobPinMarkers).forEach(key => {
@@ -1062,11 +847,6 @@
 
     const activeKeys = new Set();
 
-    // Cap visible pins to the closest N jobs relative to CENTER (the user's
-    // shared location, or their last ZIP search point) to keep the map from
-    // feeling cluttered even after dedup. The currently-focused job's pin is
-    // always kept regardless of this cap (see below) so opening a job never
-    // makes its own pin disappear.
     const MAX_VISIBLE_PINS = 5;
     const nearestJobs = [...activeMapJobs]
       .sort((a, b) =>
@@ -1078,17 +858,13 @@
     nearestJobs.forEach(job => {
       const key = `${job.lng.toFixed(6)},${job.lat.toFixed(6)}`;
       activeKeys.add(key);
-      if (jobPinMarkers[key]) return; // already rendered, leave it alone
+      if (jobPinMarkers[key]) return;
       addJobPinMarker(job.lng, job.lat, {
         title: job.title, company: job.company, url: job.url,
         category: job.category, color: colorMap[job.category] || '#00ff88'
       }, key);
     });
 
-    // Always keep the currently-focused job's pin alive, even if it falls outside
-    // the closest-5 cap above (so opening a job never makes its own pin disappear),
-    // or if it somehow isn't in activeMapJobs yet (e.g. focused via search before
-    // the filter list updated).
     if (currentJob) {
       const fkey = `${currentJob.lng.toFixed(6)},${currentJob.lat.toFixed(6)}`;
       activeKeys.add(fkey);
@@ -1101,8 +877,6 @@
       }
     }
 
-    // Only remove markers for jobs that are no longer in the active filter at all
-    // (category changed, reset, etc.) — never remove based on camera/viewport state.
     Object.keys(jobPinMarkers).forEach(key => {
       if (!activeKeys.has(key)) {
         jobPinMarkers[key].remove();
@@ -1148,9 +922,6 @@
     const parseResults = (data) =>
       (data.results||[]).filter(j=>j.latitude&&j.longitude).map(j=>({id:j.id,title:j.title,company:j.company?.display_name||'Unknown',url:j.redirect_url,lat:j.latitude,lng:j.longitude,category:tag==='all'?(j.category?.tag||'all'):tag}));
 
-    // Fetch pages 1 and 2 (Adzuna's max is 50 results/page) to roughly double
-    // available listings per category. Each page is fetched independently so a
-    // failure on page 2 (e.g. rate limit) doesn't lose page 1's results.
     const fetchPage = async (page) => {
       try {
         const res = await fetch(`https://api.adzuna.com/v1/api/jobs/us/search/${page}?app_id=${APP_ID}&app_key=${APP_KEY}&where=Dallas,TX&results_per_page=50&distance=${RADIUS}${catParam}`);
@@ -1164,15 +935,8 @@
     return [...page1, ...page2];
   }
 
-  // ── Map load ──────────────────────────────────────────────────────────────
   map.on('load', async () => {
 
-    // ── Darken/desaturate the base style's navy land+water ──────────────
-    // dark-v11's default palette renders land/water in a saturated navy-blue
-    // that visually clashes with the app's near-black UI. We override those
-    // specific paint properties at runtime (without forking the whole style)
-    // so the map reads as dark charcoal-navy instead. Wrapped per-layer in
-    // try/catch since exact layer IDs can shift between style versions.
     const navyOverrides = [
       ['background', 'background-color', '#0d0f14'],
       ['land', 'background-color', '#0d0f14'],
@@ -1185,22 +949,18 @@
     navyOverrides.forEach(([layerId, prop, value]) => {
       try {
         if (map.getLayer(layerId)) map.setPaintProperty(layerId, prop, value);
-      } catch (e) { /* layer/property not present in this style version — skip */ }
+      } catch (e) {}
     });
 
-    // 3D buildings
     map.addLayer({ id:'3d-buildings', source:'composite', 'source-layer':'building', filter:['==','extrude','true'], type:'fill-extrusion', minzoom:14,
       paint:{ 'fill-extrusion-color':'#1a1a2e', 'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,14.5,['get','height']], 'fill-extrusion-base':['interpolate',['linear'],['zoom'],14,0,14.5,['get','min_height']], 'fill-extrusion-opacity':0.75 }
     });
 
-    // Radius circle
     map.addSource('radius-circle',{type:'geojson',data:makeCircle(CENTER,RADIUS)});
     map.addLayer({id:'radius-fill',type:'fill',source:'radius-circle',paint:{'fill-color':'#00ff88','fill-opacity':0.03}});
     map.addLayer({id:'radius-outline',type:'line',source:'radius-circle',paint:{'line-color':'#00ff88','line-width':1.5,'line-opacity':0.3,'line-dasharray':[4,3]}});
 
-    // Jobs
     map.addSource('jobs',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:48});
-    // Heatmap layer — hiring density, toggled separately from pins/clusters
     map.addLayer({
       id: 'jobs-heat', type: 'heatmap', source: 'jobs',
       maxzoom: 16,
@@ -1260,7 +1020,6 @@
       map.setPaintProperty('radius-outline','line-opacity',0.3*fade);
     });
 
-    // Keep 3D pin markers in sync as the map pans, zooms, or clusters expand/collapse
     map.on('moveend', syncJobPinMarkers);
     map.on('sourcedata', (e) => { if (e.sourceId === 'jobs' && e.isSourceLoaded) syncJobPinMarkers(); });
 
