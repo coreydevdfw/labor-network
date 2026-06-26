@@ -30,6 +30,7 @@
       width: 320px; min-width: 320px; height: 100dvh;
       background: #0f0f0f; border-right: 1px solid rgba(255,255,255,0.07);
       display: flex; flex-direction: column; z-index: 20;
+      box-shadow: 3px 0 0 rgba(0,255,136,0.07), 6px 0 22px rgba(0,0,0,0.45);
     }
     #map-wrap { flex: 1; position: relative; overflow: hidden; }
     #map { position: absolute; inset: 0; }
@@ -43,12 +44,20 @@
       );
     }
     /* ── Sidebar header ── */
-    #sidebar-header-wrap { flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    #sidebar-header-wrap {
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(0,255,136,0.12);
+      background: #111;
+      box-shadow: 0 2px 0 rgba(0,255,136,0.09), 0 4px 12px rgba(0,0,0,0.3);
+    }
     #sidebar-header {
       padding: 16px 14px 10px;
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
-    .logo { font-size: 15px; font-weight: 800; color: #00ff88; letter-spacing: 0.05em; }
+    .logo {
+      font-size: 15px; font-weight: 800; color: #00ff88; letter-spacing: 0.05em;
+      text-shadow: 2px 2px 0 rgba(0,255,136,0.22), 3px 3px 0 rgba(0,255,136,0.09);
+    }
     .tagline { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 1px; }
     #zip-row { padding: 0 14px 12px; }
     #zip-toggle-link {
@@ -84,11 +93,17 @@
       white-space: nowrap; flex-shrink: 0; font-family: inherit;
     }
     #locate-btn:hover { background: rgba(0,255,136,0.16); }
-    #locate-btn.located { color: #fff; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); }
+    #locate-btn.located { color: #fff; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); box-shadow: 2px 2px 0 rgba(255,255,255,0.08); }
     #locate-btn.locating { opacity: 0.5; pointer-events: none; }
     #locate-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
-    /* ── Filter ── */
-    #filter-wrap { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; display: flex; gap: 8px; align-items: center; }
+    /* ── Filter / nav bar ── */
+    #filter-wrap {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(0,255,136,0.1);
+      flex-shrink: 0; display: flex; gap: 8px; align-items: center;
+      background: #0e0e0e;
+      box-shadow: 0 2px 0 rgba(0,255,136,0.07), 0 4px 10px rgba(0,0,0,0.25);
+    }
     #filter-select-wrap { flex: 1; position: relative; display: flex; align-items: center; }
     #view-toggle {
       display: flex; flex-shrink: 0; background: rgba(255,255,255,0.04);
@@ -100,7 +115,7 @@
       font-family: inherit; transition: all 0.15s; display: flex; align-items: center; gap: 3px;
       white-space: nowrap;
     }
-    #view-toggle button.active { background: rgba(0,255,136,0.14); color: #00ff88; }
+    #view-toggle button.active { background: rgba(0,255,136,0.14); color: #00ff88; box-shadow: 2px 2px 0 rgba(0,255,136,0.18); }
     #view-toggle button svg { width: 13px; height: 13px; }
     #reset-filter-btn {
       flex-shrink: 0; width: 34px; height: 34px;
@@ -287,59 +302,20 @@
     .mapboxgl-ctrl-attrib a { color: rgba(255,255,255,0.4) !important; font-size: 10px !important; }
     .mapboxgl-ctrl-attrib-button { filter: invert(1) brightness(0.7); }
     .mapboxgl-ctrl-bottom-left { z-index: 3; }
-    /* ── 3D animated job pin marker ── */
-    .job-pin-3d {
-      width: 32px; height: 40px; position: relative; cursor: pointer;
-      transform-origin: bottom center;
-      animation: pin3dDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, pin3dBob 2.4s ease-in-out 0.4s infinite;
+    /* ── Job pin marker — offset shadow badge style ── */
+    .job-pin-badge {
+      width: 28px; height: 28px; cursor: pointer;
+      transition: transform 0.15s ease;
+      animation: pinDrop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
-    .job-pin-3d .pin3d-body {
-      width: 27px; height: 27px; border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg); position: absolute; top: 1px; left: 2.5px;
-      border: 1.5px solid rgba(255,255,255,0.85);
-      box-shadow: 0 4px 9px rgba(0,0,0,0.6), inset 0 -4px 6px rgba(0,0,0,0.35), inset 0 2px 5px rgba(255,255,255,0.55);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    .job-pin-badge:hover { transform: scale(1.25); }
+    @keyframes pinDrop {
+      0%   { transform: translateY(-18px) scale(0.5); opacity: 0; }
+      70%  { transform: translateY(2px) scale(1.08); opacity: 1; }
+      100% { transform: translateY(0) scale(1); }
     }
-    .job-pin-3d .pin3d-emoji {
-      transform: rotate(45deg); font-size: 14px; line-height: 1; user-select: none;
-      text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
-      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
-    }
-    .job-pin-3d .pin3d-shadow {
-      position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
-      width: 15px; height: 5px; background: rgba(0,0,0,0.45); border-radius: 50%; filter: blur(2px);
-    }
-    .job-pin-3d:hover .pin3d-body {
-      transform: rotate(-45deg) scale(1.22) translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.65), inset 0 -4px 6px rgba(0,0,0,0.35), inset 0 2px 5px rgba(255,255,255,0.6);
-      border-color: #fff;
-    }
-    @keyframes pin3dDrop {
-      0%   { transform: translateY(-26px) scale(0.4); opacity: 0; }
-      65%  { transform: translateY(2px) scale(1.1); opacity: 1; }
-      100% { transform: translateY(0) scale(1); opacity: 1; }
-    }
-    @keyframes pin3dBob {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-3px); }
-    }
-    /* ── User location marker ── */
-    .user-location-marker { width: 18px; height: 18px; position: relative; }
-    .user-location-marker .dot {
-      width: 14px; height: 14px; background: #00ff88; border-radius: 50%;
-      border: 2.5px solid #fff; box-shadow: 0 0 0 2px rgba(0,255,136,0.4), 0 2px 8px rgba(0,0,0,0.5);
-      position: absolute; top: 2px; left: 2px; z-index: 2;
-    }
-    .user-location-marker .pulse-ring {
-      width: 18px; height: 18px; background: rgba(0,255,136,0.35);
-      border-radius: 50%; position: absolute; top: 0; left: 0;
-      animation: locationPulse 2s infinite ease-out;
-    }
-    @keyframes locationPulse {
-      0%   { transform: scale(1);   opacity: 0.7; }
-      100% { transform: scale(3.2); opacity: 0; }
-    }
+    /* ── User location marker — offset shadow badge style, green ── */
+    .user-location-marker { width: 28px; height: 28px; position: relative; display: block; }
     .mapboxgl-popup-content { background:#111!important; border:1px solid rgba(0,255,136,0.25)!important; border-radius:10px!important; padding:14px 16px!important; box-shadow:0 8px 32px rgba(0,0,0,0.6)!important; min-width:200px; }
     .mapboxgl-popup-tip { display:none!important; }
     .mapboxgl-popup-close-button { color:rgba(255,255,255,0.4)!important; font-size:16px!important; top:6px!important; right:8px!important; }
@@ -728,7 +704,12 @@
     if (userMarker) { userMarker.setLngLat(coords); return; }
     const el = document.createElement('div');
     el.className = 'user-location-marker';
-    el.innerHTML = `<div class="pulse-ring"></div><div class="dot"></div>`;
+    // Offset shadow badge: shadow circle (bottom-right) + main circle (top-left), both green
+    el.innerHTML = `
+      <svg width="28" height="28" viewBox="0 0 28 28" style="display:block;overflow:visible">
+        <circle cx="17" cy="17" r="9" fill="rgba(0,255,136,0.32)"/>
+        <circle cx="11" cy="11" r="9" fill="#00ff88" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+      </svg>`;
     userMarker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat(coords).addTo(map);
   }
 
@@ -1041,10 +1022,12 @@
     if (!map.getLayer('jobs-heat')) return;
     const pinVis  = mode === 'pins'    ? 'visible' : 'none';
     const heatVis = mode === 'heatmap' ? 'visible' : 'none';
-    map.setLayoutProperty('clusters',         'visibility', pinVis);
-    map.setLayoutProperty('cluster-count',    'visibility', pinVis);
-    map.setLayoutProperty('unclustered-point','visibility', pinVis);
-    map.setLayoutProperty('jobs-heat',        'visibility', heatVis);
+    map.setLayoutProperty('clusters-shadow',   'visibility', pinVis);
+    map.setLayoutProperty('clusters',          'visibility', pinVis);
+    map.setLayoutProperty('cluster-count',     'visibility', pinVis);
+    map.setLayoutProperty('unclustered-shadow','visibility', pinVis);
+    map.setLayoutProperty('unclustered-point', 'visibility', pinVis);
+    map.setLayoutProperty('jobs-heat',         'visibility', heatVis);
   }
   pinsBtn.addEventListener('click', () => setViewMode('pins'));
   heatBtn.addEventListener('click', () => setViewMode('heatmap'));
@@ -1225,12 +1208,14 @@
 
   function addJobPinMarker(lng, lat, props, key) {
     const el = document.createElement('div');
-    el.className = 'job-pin-3d';
+    el.className = 'job-pin-badge';
+    const c = props.color || '#00ff88';
+    // Shadow circle sits bottom-right at 30% opacity; main circle sits top-left at full opacity
     el.innerHTML = `
-      <div class="pin3d-body" style="background:${props.color||'#00ff88'}">
-        <span class="pin3d-emoji">${categoryEmoji(props.category)}</span>
-      </div>
-      <div class="pin3d-shadow"></div>`;
+      <svg width="28" height="28" viewBox="0 0 28 28" style="display:block;overflow:visible">
+        <circle cx="17" cy="17" r="9" fill="${c}" opacity="0.3"/>
+        <circle cx="11" cy="11" r="9" fill="${c}" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/>
+      </svg>`;
     el.addEventListener('click', () => {
       if (activePopup) activePopup.remove();
       activePopup = new mapboxgl.Popup({ closeButton:true, maxWidth:'260px' })
@@ -1424,11 +1409,20 @@
       }
     }, 'clusters');
 
+    // ── Cluster shadow layer (offset badge — drawn first so it sits behind) ──
+    map.addLayer({ id:'clusters-shadow', type:'circle', source:'jobs', filter:['has','point_count'],
+      paint:{
+        'circle-color':['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],
+        'circle-radius':['step',['get','point_count'],20,5,26,15,33],
+        'circle-opacity':0.28,
+        'circle-translate':[4, 4]
+      }
+    });
     map.addLayer({ id:'clusters', type:'circle', source:'jobs', filter:['has','point_count'],
       paint:{
         'circle-color':['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],
         'circle-radius':['step',['get','point_count'],20,5,26,15,33],
-        'circle-opacity':0.92, 'circle-stroke-width':2, 'circle-stroke-color':'rgba(255,255,255,0.25)'
+        'circle-opacity':0.92, 'circle-stroke-width':1.5, 'circle-stroke-color':'rgba(255,255,255,0.3)'
       }
     });
     map.addLayer({ id:'cluster-count', type:'symbol', source:'jobs', filter:['has','point_count'],
@@ -1439,18 +1433,23 @@
       },
       paint:{'text-color':'#0a0a0a'}
     });
-    map.addLayer({ id:'unclustered-pulse', type:'circle', source:'jobs', filter:['!',['has','point_count']],
+    // ── Unclustered job pin: shadow layer (offset +4px) drawn first ──
+    map.addLayer({ id:'unclustered-shadow', type:'circle', source:'jobs', filter:['!',['has','point_count']],
       paint:{
         'circle-color':['coalesce',['get','color'],'#00ff88'],
-        'circle-radius':['interpolate',['linear'],['zoom'],13,8,16,14],
-        'circle-opacity':0, 'circle-blur':0.6
+        'circle-radius':['interpolate',['linear'],['zoom'],13,8,16,12],
+        'circle-opacity':0.28,
+        'circle-translate':[4, 4]
       }
     });
+    // ── Unclustered job pin: main circle (category color, visible) ──
     map.addLayer({ id:'unclustered-point', type:'circle', source:'jobs', filter:['!',['has','point_count']],
       paint:{
         'circle-color':['coalesce',['get','color'],'#00ff88'],
-        'circle-radius':['interpolate',['linear'],['zoom'],13,6,16,10],
-        'circle-stroke-width':2, 'circle-stroke-color':'#fff', 'circle-opacity':0
+        'circle-radius':['interpolate',['linear'],['zoom'],13,8,16,12],
+        'circle-stroke-width':1.5,
+        'circle-stroke-color':'rgba(255,255,255,0.55)',
+        'circle-opacity':0.92
       }
     });
 
