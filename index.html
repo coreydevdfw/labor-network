@@ -157,10 +157,13 @@
     .commute-mode .mode-time.unrealistic { color: rgba(255,255,255,0.3); font-weight: 500; font-size: 10px; }
     .commute-mode .mode-time.dart-distance { font-size: 9px; font-weight: 600; white-space: normal; line-height: 1.25; word-break: break-word; }
     #commute-close { position: absolute; right: 12px; top: 12px; background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 16px; padding: 2px; }
-    /* ── Traffic gauge (replaces badge) ── */
+    /* ── Traffic gauge + link tracker row ── */
+    #commute-bottom-row {
+      display: flex; gap: 10px; align-items: stretch;
+    }
     #traffic-gauge-wrap {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
-      align-self: flex-start;
+      flex-shrink: 0;
     }
     #traffic-gauge { display: block; overflow: visible; }
     #gauge-needle-g {
@@ -172,6 +175,48 @@
       transition: color 0.4s ease;
       white-space: nowrap;
     }
+    /* ── Link tracker ── */
+    #link-tracker {
+      flex: 1; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 9px;
+      padding: 9px 11px; display: flex; flex-direction: column;
+      justify-content: space-between; gap: 5px; min-width: 0;
+    }
+    #link-tracker-header {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: rgba(255,255,255,0.3);
+    }
+    #link-status-row {
+      display: flex; align-items: center; gap: 6px;
+    }
+    #link-status-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(255,255,255,0.15);
+      transition: background 0.4s ease;
+    }
+    #link-status-dot.checking { background: #ffc107; animation: linkPulse 1s infinite; }
+    #link-status-dot.active   { background: #00ff88; animation: none; }
+    #link-status-dot.warn     { background: #ffc107; animation: none; }
+    #link-status-dot.down     { background: #ff6b6b; animation: none; }
+    @keyframes linkPulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+    #link-status-text {
+      font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.55);
+      transition: color 0.3s; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #link-age-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    }
+    #link-age-text {
+      font-size: 10px; color: rgba(255,255,255,0.3);
+      transition: color 0.3s;
+    }
+    #link-open-btn {
+      font-size: 10px; font-weight: 700; color: #00ff88;
+      text-decoration: none; flex-shrink: 0;
+      opacity: 0.7; transition: opacity 0.15s;
+    }
+    #link-open-btn:hover { opacity: 1; text-decoration: underline; }
     /* ── List section ── */
     #list-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     #count-bar { padding: 8px 14px 6px; font-size: 11px; color: rgba(255,255,255,0.35); flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
@@ -393,28 +438,44 @@
         </a>
       </div>
 
-      <!-- ── Traffic gauge: SVG semi-circle speedometer with animated needle ── -->
-      <div id="traffic-gauge-wrap">
-        <svg id="traffic-gauge" viewBox="0 0 80 48" width="80" height="48" style="overflow:visible">
-          <!-- Dim arc zones — always visible as scale reference -->
-          <path d="M 8 44 A 32 32 0 0 1 24 16.3" fill="none" stroke="#00ff88" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
-          <path d="M 24 16.3 A 32 32 0 0 1 56 16.3" fill="none" stroke="#ffc107" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
-          <path d="M 56 16.3 A 32 32 0 0 1 72 44" fill="none" stroke="#ff6b6b" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
-          <!-- Active zone highlight — brightened by JS -->
-          <path id="gauge-arc-active" d="" fill="none" stroke="#00ff88" stroke-width="5" stroke-linecap="round" opacity="0"/>
-          <!-- Needle group — rotated by JS around center hub (40,44) -->
-          <g id="gauge-needle-g" style="transform-origin:40px 44px; transform:rotate(-90deg)">
-            <!-- Needle shaft -->
-            <line x1="40" y1="44" x2="40" y2="15"
-                  stroke="rgba(255,255,255,0.88)" stroke-width="2" stroke-linecap="round"/>
-            <!-- Needle tip glow dot -->
-            <circle cx="40" cy="15" r="2" fill="rgba(255,255,255,0.6)"/>
-          </g>
-          <!-- Center hub — color-coded to traffic level -->
-          <circle id="gauge-hub" cx="40" cy="44" r="4"
-                  fill="#2a2a2a" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
-        </svg>
-        <div id="traffic-gauge-label">Checking traffic…</div>
+      <!-- ── Bottom row: traffic gauge (left) + link tracker (right) ── -->
+      <div id="commute-bottom-row">
+
+        <!-- Traffic gauge: SVG semi-circle speedometer with animated needle -->
+        <div id="traffic-gauge-wrap">
+          <svg id="traffic-gauge" viewBox="0 0 80 48" width="80" height="48" style="overflow:visible">
+            <!-- Dim arc zones — always visible as scale reference -->
+            <path d="M 8 44 A 32 32 0 0 1 24 16.3" fill="none" stroke="#00ff88" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
+            <path d="M 24 16.3 A 32 32 0 0 1 56 16.3" fill="none" stroke="#ffc107" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
+            <path d="M 56 16.3 A 32 32 0 0 1 72 44" fill="none" stroke="#ff6b6b" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
+            <!-- Active zone highlight — brightened by JS -->
+            <path id="gauge-arc-active" d="" fill="none" stroke="#00ff88" stroke-width="5" stroke-linecap="round" opacity="0"/>
+            <!-- Needle group — rotated by JS around center hub (40,44) -->
+            <g id="gauge-needle-g" style="transform-origin:40px 44px; transform:rotate(-90deg)">
+              <line x1="40" y1="44" x2="40" y2="15"
+                    stroke="rgba(255,255,255,0.88)" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="40" cy="15" r="2" fill="rgba(255,255,255,0.6)"/>
+            </g>
+            <!-- Center hub — color-coded to traffic level -->
+            <circle id="gauge-hub" cx="40" cy="44" r="4"
+                    fill="#2a2a2a" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+          </svg>
+          <div id="traffic-gauge-label">Checking traffic…</div>
+        </div>
+
+        <!-- Link tracker: live reachability + posting age for current job -->
+        <div id="link-tracker">
+          <div id="link-tracker-header">🔗 Link Status</div>
+          <div id="link-status-row">
+            <span id="link-status-dot"></span>
+            <span id="link-status-text">—</span>
+          </div>
+          <div id="link-age-row">
+            <span id="link-age-text">—</span>
+            <a id="link-open-btn" href="#" target="_blank" rel="noopener">Open →</a>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -570,17 +631,87 @@
   }
 
   function resetGauge() {
-    const needleG  = document.getElementById('gauge-needle-g');
+    const needleG   = document.getElementById('gauge-needle-g');
     const arcActive = document.getElementById('gauge-arc-active');
-    const hub      = document.getElementById('gauge-hub');
-    const label    = document.getElementById('traffic-gauge-label');
+    const hub       = document.getElementById('gauge-hub');
+    const label     = document.getElementById('traffic-gauge-label');
     needleG.style.transform       = 'rotate(-90deg)'; // off-scale left = "loading"
     needleG.style.transformOrigin = '40px 44px';
     arcActive.setAttribute('d',      '');
     arcActive.setAttribute('opacity','0');
     hub.setAttribute('fill', '#2a2a2a');
-    label.textContent  = 'Checking traffic…';
-    label.style.color  = 'rgba(255,255,255,0.35)';
+    label.textContent = 'Checking traffic…';
+    label.style.color = 'rgba(255,255,255,0.35)';
+  }
+
+  // ── Link tracker ──────────────────────────────────────────────────────────
+  // Attempts a no-cors HEAD request to check basic reachability of the apply
+  // URL. no-cors returns an opaque response on success and throws on network
+  // failure — it cannot detect HTTP 404/410 but will catch dead domains.
+  let linkCheckAbort = null;
+
+  async function updateLinkTracker(job) {
+    const dot      = document.getElementById('link-status-dot');
+    const text     = document.getElementById('link-status-text');
+    const ageEl    = document.getElementById('link-age-text');
+    const openBtn  = document.getElementById('link-open-btn');
+
+    // Always wire the open button to the current job URL
+    openBtn.href = job.url || '#';
+
+    // Posting age
+    if (job.created) {
+      const days = Math.floor((Date.now() - new Date(job.created).getTime()) / (1000 * 60 * 60 * 24));
+      if (days === 0)       { ageEl.textContent = 'Posted today';      ageEl.style.color = '#00ff88'; }
+      else if (days === 1)  { ageEl.textContent = 'Posted yesterday';  ageEl.style.color = '#00ff88'; }
+      else if (days <= 14)  { ageEl.textContent = `${days}d ago`;      ageEl.style.color = '#00ff88'; }
+      else if (days <= 30)  { ageEl.textContent = `${days}d ago`;      ageEl.style.color = '#ffc107'; }
+      else                  { ageEl.textContent = `${days}d ago ⚠️`;   ageEl.style.color = '#ff6b6b'; }
+    } else {
+      ageEl.textContent = 'Age unknown';
+      ageEl.style.color = 'rgba(255,255,255,0.3)';
+    }
+
+    // Abort any previous in-flight check
+    if (linkCheckAbort) linkCheckAbort.abort();
+    linkCheckAbort = new AbortController();
+
+    dot.className = 'checking';
+    text.textContent = 'Checking…';
+    text.style.color = 'rgba(255,255,255,0.55)';
+
+    try {
+      await fetch(job.url, {
+        method: 'HEAD',
+        mode: 'no-cors',
+        signal: linkCheckAbort.signal,
+        cache: 'no-store'
+      });
+      // Opaque success — domain/URL is reachable
+      dot.className    = 'active';
+      text.textContent = 'Link active';
+      text.style.color = '#00ff88';
+    } catch(e) {
+      if (e.name === 'AbortError') return; // navigated away, ignore
+      dot.className    = 'down';
+      text.textContent = 'May be unavailable';
+      text.style.color = '#ff6b6b';
+    }
+  }
+
+  function resetLinkTracker() {
+    if (linkCheckAbort) { linkCheckAbort.abort(); linkCheckAbort = null; }
+    const dot     = document.getElementById('link-status-dot');
+    const text    = document.getElementById('link-status-text');
+    const ageEl   = document.getElementById('link-age-text');
+    const openBtn = document.getElementById('link-open-btn');
+    dot.className       = '';
+    dot.style.background = 'rgba(255,255,255,0.15)';
+    text.textContent    = '—';
+    text.style.color    = 'rgba(255,255,255,0.55)';
+    ageEl.textContent   = '—';
+    ageEl.style.color   = 'rgba(255,255,255,0.3)';
+    openBtn.href        = '#';
   }
 
   // ── Freshness helper ─────────────────────────────────────────────────────
@@ -751,12 +882,13 @@
     document.getElementById('commute-job-company').textContent = job.company;
     document.getElementById('commute-panel').classList.add('visible');
 
-    // Reset commute times + gauge to loading state
+    // Reset commute times, gauge, and link tracker to loading state
     ['driving','walking','cycling','dart'].forEach(m => {
       const el = document.getElementById(`time-${m}`);
       el.textContent = '…'; el.className = 'mode-time loading';
     });
     resetGauge();
+    updateLinkTracker(job); // start link check immediately (non-blocking)
 
     const dest = [job.lng, job.lat];
 
@@ -849,11 +981,12 @@
   function closeCommute() {
     document.getElementById('commute-panel').classList.remove('visible');
     currentJob = null; currentDartDest = null;
-    if (map.getLayer('route-line'))     map.removeLayer('route-line');
+    if (map.getLayer('route-line'))      map.removeLayer('route-line');
     if (map.getLayer('route-line-glow')) map.removeLayer('route-line-glow');
-    if (map.getSource('route'))         map.removeSource('route');
+    if (map.getSource('route'))          map.removeSource('route');
     if (activePopup) { activePopup.remove(); activePopup = null; }
     resetGauge();
+    resetLinkTracker();
   }
 
   // ── Dropdown ─────────────────────────────────────────────────────────────
