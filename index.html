@@ -172,6 +172,7 @@
     .commute-mode .mode-time.loading { color: rgba(255,255,255,0.3); font-size: 9px; }
     .commute-mode .mode-time.unrealistic { color: rgba(255,255,255,0.3); font-weight: 500; font-size: 10px; }
     .commute-mode .mode-time.dart-distance { font-size: 9px; font-weight: 600; white-space: normal; line-height: 1.25; word-break: break-word; }
+    .commute-mode .mode-time.dart-station { font-size: 9px; font-weight: 600; white-space: normal; line-height: 1.2; word-break: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     #commute-close { position: absolute; right: 12px; top: 12px; background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 16px; padding: 2px; }
     /* ── Traffic gauge + link tracker row ── */
     #commute-bottom-row {
@@ -898,11 +899,20 @@
     if (nearestDartStation) {
       const miles = nearestDartStation.distance;
       if (miles < 0.3) {
-        dartEl.className = 'mode-time';
-        dartEl.innerHTML = `<span style="font-size:9px;">${nearestDartStation.name}</span>`;
+        // Shorten long station names: strip trailing "Station", "Rail Station", etc.
+        let sName = nearestDartStation.name
+          .replace(/\s*(Light Rail\s*)?Station\s*$/i, '')
+          .trim();
+        // If still too long (>16 chars), cut at "/" or " - "
+        if (sName.length > 16) {
+          const cut = sName.search(/[\/\-–]/);
+          if (cut > 2) sName = sName.slice(0, cut).trim();
+        }
+        dartEl.className = 'mode-time dart-station';
+        dartEl.textContent = sName || nearestDartStation.name;
       } else {
         dartEl.className = 'mode-time dart-distance';
-        dartEl.textContent = `${miles.toFixed(1)} mi to station`;
+        dartEl.textContent = `${miles.toFixed(1)} mi away`;
       }
     } else {
       dartEl.className = 'mode-time unrealistic';
