@@ -51,14 +51,15 @@
       box-shadow: 0 2px 0 rgba(0,255,136,0.09), 0 4px 12px rgba(0,0,0,0.3);
     }
     #sidebar-header {
-      padding: 16px 14px 10px;
+      padding: 20px 16px 12px;
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
     .logo {
-      font-size: 15px; font-weight: 800; color: #00ff88; letter-spacing: 0.05em;
-      text-shadow: 2px 2px 0 rgba(0,255,136,0.22), 3px 3px 0 rgba(0,255,136,0.09);
+      font-size: 22px; font-weight: 800; color: #00ff88; letter-spacing: 0.04em;
+      text-shadow: 2px 2px 0 rgba(0,255,136,0.25), 4px 4px 0 rgba(0,255,136,0.1);
+      line-height: 1.1;
     }
-    .tagline { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+    .tagline { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 3px; letter-spacing: 0.02em; }
     #zip-row { padding: 0 14px 12px; }
     #zip-toggle-link {
       background: none; border: none; color: rgba(255,255,255,0.35);
@@ -704,11 +705,16 @@
     if (userMarker) { userMarker.setLngLat(coords); return; }
     const el = document.createElement('div');
     el.className = 'user-location-marker';
-    // Offset shadow badge: shadow circle (bottom-right) + main circle (top-left), both green
+    // Diamond (rotated square) with offset shadow — same visual footprint as job circles.
+    // Shadow diamond sits offset +6px bottom-right at 32% opacity; main diamond sits top-left solid green.
+    // rx="1.5" keeps corners just barely rounded so it reads as a sharp diamond, not a blob.
     el.innerHTML = `
       <svg width="28" height="28" viewBox="0 0 28 28" style="display:block;overflow:visible">
-        <circle cx="17" cy="17" r="9" fill="rgba(0,255,136,0.32)"/>
-        <circle cx="11" cy="11" r="9" fill="#00ff88" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+        <rect x="10.5" y="10.5" width="13" height="13" rx="1.5"
+              fill="rgba(0,255,136,0.32)" transform="rotate(45 17 17)"/>
+        <rect x="4.5" y="4.5" width="13" height="13" rx="1.5"
+              fill="#00ff88" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"
+              transform="rotate(45 11 11)"/>
       </svg>`;
     userMarker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat(coords).addTo(map);
   }
