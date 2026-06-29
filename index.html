@@ -200,9 +200,9 @@
       gap: 6px; min-width: 0; overflow: hidden;
     }
     #link-tracker-header {
-      font-size: 9px; font-weight: 700; letter-spacing: 0.07em;
-      text-transform: uppercase; color: rgba(255,255,255,0.3);
-      flex-shrink: 0;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+      text-transform: uppercase; color: #00ff88; flex-shrink: 0;
+      text-shadow: 1px 1px 0 rgba(0,255,136,0.25), 2px 2px 0 rgba(0,255,136,0.1);
     }
     #link-tile-stage {
       flex: 1; position: relative; overflow: hidden;
@@ -479,7 +479,7 @@
 
         <!-- Link tracker: animated tile per job posting -->
         <div id="link-tracker">
-          <div id="link-tracker-header">🔗 Live Tracker</div>
+          <div id="link-tracker-header">Link Status</div>
           <div id="link-tile-stage"></div>
         </div>
 
@@ -711,26 +711,31 @@
     // Show checking tile
     _spawnTile('status-checking', 'checking', 'Checking…', '', age.text, age.color, job.url);
 
+    // Hold checking tile visible long enough to see the drop animation
+    const minDelay = new Promise(r => setTimeout(r, 900));
+    let fetchOk = true;
+
     try {
       await fetch(job.url, {
         method: 'HEAD', mode: 'no-cors',
         signal: linkCheckAbort.signal, cache: 'no-store'
       });
+    } catch(e) {
+      if (e.name === 'AbortError') return;
+      fetchOk = false;
+    }
 
-      if (_tileJob !== job) return; // job changed while fetching
+    await minDelay;
+    if (_tileJob !== job) return;
 
+    if (fetchOk) {
       if (isStalePosting) {
-        // Link reachable but posting is old — yellow
         _spawnTile('status-yellow', 'yellow', 'Posting may be stale', 'yellow', age.text, age.color, job.url);
       } else {
         _spawnTile('status-green', 'green', 'Link active', 'green', age.text, age.color, job.url);
       }
-    } catch(e) {
-      if (e.name === 'AbortError') return;
-      if (_tileJob !== job) return;
-
+    } else {
       if (!job.created) {
-        // Can't verify and no date — yellow
         _spawnTile('status-yellow', 'yellow', 'Cannot verify', 'yellow', age.text, age.color, job.url);
       } else {
         _spawnTile('status-red', 'red', 'May be unavailable', 'red', age.text, age.color, job.url);
@@ -764,8 +769,8 @@
     // rx="1.5" keeps corners just barely rounded so it reads as a sharp diamond, not a blob.
     el.innerHTML = `
       <svg width="28" height="28" viewBox="0 0 28 28" style="display:block;overflow:visible">
-        <rect x="11.5" y="11.5" width="11" height="11" rx="1.5"
-              fill="rgba(0,255,136,0.32)" transform="rotate(45 17 17)"/>
+        <rect x="7.5" y="7.5" width="11" height="11" rx="1.5"
+              fill="rgba(0,255,136,0.28)" transform="rotate(45 13 13)"/>
         <rect x="5.5" y="5.5" width="11" height="11" rx="1.5"
               fill="#00ff88" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"
               transform="rotate(45 11 11)"/>
