@@ -197,37 +197,13 @@
       font-size: 9px; color: rgba(255,255,255,0.3); white-space: nowrap;
     }
     #traffic-strip-right {
-      display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; justify-content: center;
     }
     #traffic-gauge-wrap { display: block; }
     #traffic-gauge { display: block; overflow: visible; }
     #gauge-needle-g {
       transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    /* Link status pill inside the traffic strip */
-    #link-status-pill {
-      display: flex; align-items: center; gap: 4px;
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 20px; padding: 3px 8px; transition: all 0.3s;
-    }
-    #link-status-pill.green  { background: rgba(0,255,136,0.1);  border-color: rgba(0,255,136,0.3); }
-    #link-status-pill.yellow { background: rgba(255,193,7,0.1);  border-color: rgba(255,193,7,0.3); }
-    #link-status-pill.red    { background: rgba(255,107,107,0.1); border-color: rgba(255,107,107,0.3); }
-    #link-pill-dot {
-      width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.2); flex-shrink: 0;
-      transition: background 0.3s;
-    }
-    #link-pill-dot.checking { background: #ffc107; animation: tilePulse 0.8s infinite; }
-    #link-pill-dot.green    { background: #00ff88; }
-    #link-pill-dot.yellow   { background: #ffc107; }
-    #link-pill-dot.red      { background: #ff6b6b; }
-    #link-pill-text {
-      font-size: 8px; font-weight: 700; color: rgba(255,255,255,0.5);
-      white-space: nowrap; transition: color 0.3s;
-    }
-    #link-pill-text.green  { color: #00ff88; }
-    #link-pill-text.yellow { color: #ffc107; }
-    #link-pill-text.red    { color: #ff6b6b; }
     /* ── Link tracker ── */
     @keyframes tilePulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
     /* ── List section ── */
@@ -477,10 +453,6 @@ Lyft
                 <circle id="gauge-hub" cx="40" cy="44" r="4" fill="#2a2a2a" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
               </svg>
             </div>
-            <div id="link-status-pill">
-              <span id="link-pill-dot"></span>
-              <span id="link-pill-text">—</span>
-            </div>
           </div>
         </div>
       </div>
@@ -662,9 +634,6 @@ Lyft
   // failure — it cannot detect HTTP 404/410 but will catch dead domains.
   let linkCheckAbort = null;
 
-  // ── Live Tracker tile engine ─────────────────────────────────────────────
-  let _tileJob = null;
-
   function _ageLabel(created) {
     if (!created) return { text: 'Age unknown', color: 'rgba(255,255,255,0.28)' };
     const days = Math.floor((Date.now() - new Date(created).getTime()) / 864e5);
@@ -675,71 +644,17 @@ Lyft
     return               { text: `${days}d ago`,            color: '#ff6b6b' };
   }
 
-  function _setPill(dotClass, labelText, pillClass) {
-    const dot  = document.getElementById('link-pill-dot');
-    const text = document.getElementById('link-pill-text');
-    const pill = document.getElementById('link-status-pill');
-    if (!dot || !text || !pill) return;
-    dot.className  = dotClass;
-    text.className = dotClass;
-    text.textContent = labelText;
-    pill.className = pillClass ? `${pillClass}` : '';
-  }
-
-  async function updateLinkTracker(job) {
-    _tileJob = job;
-
-    if (linkCheckAbort) linkCheckAbort.abort();
-    linkCheckAbort = new AbortController();
-
-    const age = _ageLabel(job.created);
-    const isStalePosting = job.created
-      ? (Date.now() - new Date(job.created).getTime()) > 30 * 864e5
-      : false;
-
-    // Update sub-label with posting age
-    const sub = document.getElementById('traffic-strip-sub');
-    if (sub) sub.textContent = age.text;
-
-    _setPill('checking', 'Checking…', '');
-
-    const minDelay = new Promise(r => setTimeout(r, 900));
-    let fetchOk = true;
-
-    try {
-      await fetch(job.url, {
-        method: 'HEAD', mode: 'no-cors',
-        signal: linkCheckAbort.signal, cache: 'no-store'
-      });
-    } catch(e) {
-      if (e.name === 'AbortError') return;
-      fetchOk = false;
-    }
-
-    await minDelay;
-    if (_tileJob !== job) return;
-
-    if (fetchOk) {
-      if (isStalePosting) {
-        _setPill('yellow', 'May be stale', 'yellow');
-      } else {
-        _setPill('green', 'Link active', 'green');
-      }
-    } else {
-      if (!job.created) {
-        _setPill('yellow', 'Unverified', 'yellow');
-      } else {
-        _setPill('red', 'Unavailable', 'red');
-      }
-    }
-  }
-
   function resetLinkTracker() {
-    _tileJob = null;
     if (linkCheckAbort) { linkCheckAbort.abort(); linkCheckAbort = null; }
-    _setPill('', '—', '');
     const sub = document.getElementById('traffic-strip-sub');
     if (sub) sub.textContent = '';
+  }
+
+  function updateLinkTracker(job) {
+    // Link status removed — posting age is shown in the job cards directly
+    const age = _ageLabel(job.created);
+    const sub = document.getElementById('traffic-strip-sub');
+    if (sub) sub.textContent = age.text;
   }
 
   // ── Freshness helper ─────────────────────────────────────────────────────
