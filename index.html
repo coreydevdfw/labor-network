@@ -197,43 +197,79 @@
       flex: 1; background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08); border-radius: 9px;
       padding: 9px 11px; display: flex; flex-direction: column;
-      justify-content: space-between; gap: 5px; min-width: 0;
+      gap: 6px; min-width: 0; overflow: hidden;
     }
     #link-tracker-header {
       font-size: 9px; font-weight: 700; letter-spacing: 0.07em;
       text-transform: uppercase; color: rgba(255,255,255,0.3);
+      flex-shrink: 0;
     }
-    #link-status-row {
-      display: flex; align-items: center; gap: 6px;
+    #link-tile-stage {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 52px;
     }
-    #link-status-dot {
-      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-      background: rgba(255,255,255,0.15);
-      transition: background 0.4s ease;
+    .link-tile {
+      position: absolute; width: 100%; box-sizing: border-box;
+      border-radius: 7px; padding: 6px 8px;
+      display: flex; flex-direction: column; gap: 3px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      transform: translateY(-40px); opacity: 0;
+      animation: tileEnter 0.35s cubic-bezier(0.34,1.4,0.64,1) forwards;
     }
-    #link-status-dot.checking { background: #ffc107; animation: linkPulse 1s infinite; }
-    #link-status-dot.active   { background: #00ff88; animation: none; }
-    #link-status-dot.warn     { background: #ffc107; animation: none; }
-    #link-status-dot.down     { background: #ff6b6b; animation: none; }
-    @keyframes linkPulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
-    #link-status-text {
-      font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.55);
-      transition: color 0.3s; white-space: nowrap; overflow: hidden;
-      text-overflow: ellipsis;
+    .link-tile.tile-exit {
+      animation: tileFall 0.5s cubic-bezier(0.55,0,1,0.45) forwards;
     }
-    #link-age-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    .link-tile.status-green  { border-color: rgba(0,255,136,0.35); background: rgba(0,255,136,0.07); }
+    .link-tile.status-yellow { border-color: rgba(255,193,7,0.35);  background: rgba(255,193,7,0.06); }
+    .link-tile.status-red    { border-color: rgba(255,107,107,0.35);background: rgba(255,107,107,0.06); }
+    .link-tile.status-checking { border-color: rgba(255,255,255,0.08); }
+    @keyframes tileEnter {
+      0%   { transform: translateY(-40px); opacity: 0; }
+      100% { transform: translateY(0);     opacity: 1; }
     }
-    #link-age-text {
-      font-size: 10px; color: rgba(255,255,255,0.3);
-      transition: color 0.3s;
+    @keyframes tileFall {
+      0%   { transform: translateY(0)    scaleY(1);    opacity: 1; }
+      30%  { transform: translateY(4px)  scaleY(0.96); opacity: 1; }
+      100% { transform: translateY(60px) scaleY(0.8);  opacity: 0; }
     }
-    #link-open-btn {
-      font-size: 10px; font-weight: 700; color: #00ff88;
-      text-decoration: none; flex-shrink: 0;
-      opacity: 0.7; transition: opacity 0.15s;
+    .tile-status-row { display: flex; align-items: center; gap: 5px; }
+    .tile-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(255,255,255,0.2);
     }
-    #link-open-btn:hover { opacity: 1; text-decoration: underline; }
+    .tile-dot.checking { background: #ffc107; animation: tilePulse 0.8s infinite; }
+    .tile-dot.green    { background: #00ff88; }
+    .tile-dot.yellow   { background: #ffc107; }
+    .tile-dot.red      { background: #ff6b6b; }
+    @keyframes tilePulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+    .tile-status-label {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+      color: rgba(255,255,255,0.7);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tile-status-label.green  {
+      color: #00ff88;
+      text-shadow: 1px 1px 0 rgba(0,255,136,0.25), 2px 2px 0 rgba(0,255,136,0.1);
+    }
+    .tile-status-label.yellow {
+      color: #ffc107;
+      text-shadow: 1px 1px 0 rgba(255,193,7,0.25), 2px 2px 0 rgba(255,193,7,0.1);
+    }
+    .tile-status-label.red    {
+      color: #ff6b6b;
+      text-shadow: 1px 1px 0 rgba(255,107,107,0.25), 2px 2px 0 rgba(255,107,107,0.1);
+    }
+    .tile-meta-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 4px;
+    }
+    .tile-age { font-size: 9px; color: rgba(255,255,255,0.28); }
+    .tile-open {
+      font-size: 9px; font-weight: 700; color: #00ff88;
+      text-decoration: none; opacity: 0.7; transition: opacity 0.15s; flex-shrink: 0;
+    }
+    .tile-open:hover { opacity: 1; text-decoration: underline; }
     /* ── List section ── */
     #list-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     #count-bar { padding: 8px 14px 6px; font-size: 11px; color: rgba(255,255,255,0.35); flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
@@ -441,17 +477,10 @@
           <div id="traffic-gauge-label">Checking traffic…</div>
         </div>
 
-        <!-- Link tracker: live reachability + posting age for current job -->
+        <!-- Link tracker: animated tile per job posting -->
         <div id="link-tracker">
-          <div id="link-tracker-header">🔗 Link Status</div>
-          <div id="link-status-row">
-            <span id="link-status-dot"></span>
-            <span id="link-status-text">—</span>
-          </div>
-          <div id="link-age-row">
-            <span id="link-age-text">—</span>
-            <a id="link-open-btn" href="#" target="_blank" rel="noopener">Open →</a>
-          </div>
+          <div id="link-tracker-header">🔗 Live Tracker</div>
+          <div id="link-tile-stage"></div>
         </div>
 
       </div>
@@ -628,68 +657,92 @@
   // failure — it cannot detect HTTP 404/410 but will catch dead domains.
   let linkCheckAbort = null;
 
-  async function updateLinkTracker(job) {
-    const dot      = document.getElementById('link-status-dot');
-    const text     = document.getElementById('link-status-text');
-    const ageEl    = document.getElementById('link-age-text');
-    const openBtn  = document.getElementById('link-open-btn');
+  // ── Live Tracker tile engine ─────────────────────────────────────────────
+  let _tileJob = null;
 
-    // Always wire the open button to the current job URL
-    openBtn.href = job.url || '#';
+  function _ageLabel(created) {
+    if (!created) return { text: 'Age unknown', color: 'rgba(255,255,255,0.28)' };
+    const days = Math.floor((Date.now() - new Date(created).getTime()) / 864e5);
+    if (days === 0)      return { text: 'Posted today',     color: '#00ff88' };
+    if (days === 1)      return { text: 'Posted yesterday', color: '#00ff88' };
+    if (days <= 14)      return { text: `${days}d ago`,     color: '#00ff88' };
+    if (days <= 30)      return { text: `${days}d ago`,     color: '#ffc107' };
+    return               { text: `${days}d ago`,            color: '#ff6b6b' };
+  }
 
-    // Posting age
-    if (job.created) {
-      const days = Math.floor((Date.now() - new Date(job.created).getTime()) / (1000 * 60 * 60 * 24));
-      if (days === 0)       { ageEl.textContent = 'Posted today';      ageEl.style.color = '#00ff88'; }
-      else if (days === 1)  { ageEl.textContent = 'Posted yesterday';  ageEl.style.color = '#00ff88'; }
-      else if (days <= 14)  { ageEl.textContent = `${days}d ago`;      ageEl.style.color = '#00ff88'; }
-      else if (days <= 30)  { ageEl.textContent = `${days}d ago`;      ageEl.style.color = '#ffc107'; }
-      else                  { ageEl.textContent = `${days}d ago ⚠️`;   ageEl.style.color = '#ff6b6b'; }
-    } else {
-      ageEl.textContent = 'Age unknown';
-      ageEl.style.color = 'rgba(255,255,255,0.3)';
+  function _spawnTile(statusClass, dotClass, labelText, labelClass, ageText, ageColor, url) {
+    const stage = document.getElementById('link-tile-stage');
+    if (!stage) return;
+
+    // Drop any existing tile
+    const old = stage.querySelector('.link-tile');
+    if (old && !old.classList.contains('tile-exit')) {
+      old.classList.add('tile-exit');
+      old.addEventListener('animationend', () => old.remove(), { once: true });
     }
+
+    const tile = document.createElement('div');
+    tile.className = `link-tile ${statusClass}`;
+    tile.innerHTML = `
+      <div class="tile-status-row">
+        <span class="tile-dot ${dotClass}"></span>
+        <span class="tile-status-label ${labelClass}">${labelText}</span>
+      </div>
+      <div class="tile-meta-row">
+        <span class="tile-age" style="color:${ageColor}">${ageText}</span>
+        ${url ? `<a class="tile-open" href="${url}" target="_blank" rel="noopener">Open →</a>` : ''}
+      </div>`;
+    stage.appendChild(tile);
+    return tile;
+  }
+
+  async function updateLinkTracker(job) {
+    _tileJob = job;
 
     // Abort any previous in-flight check
     if (linkCheckAbort) linkCheckAbort.abort();
     linkCheckAbort = new AbortController();
 
-    dot.className = 'checking';
-    text.textContent = 'Checking…';
-    text.style.color = 'rgba(255,255,255,0.55)';
+    const age = _ageLabel(job.created);
+    const isStalePosting = job.created
+      ? (Date.now() - new Date(job.created).getTime()) > 30 * 864e5
+      : false;
+
+    // Show checking tile
+    _spawnTile('status-checking', 'checking', 'Checking…', '', age.text, age.color, job.url);
 
     try {
       await fetch(job.url, {
-        method: 'HEAD',
-        mode: 'no-cors',
-        signal: linkCheckAbort.signal,
-        cache: 'no-store'
+        method: 'HEAD', mode: 'no-cors',
+        signal: linkCheckAbort.signal, cache: 'no-store'
       });
-      // Opaque success — domain/URL is reachable
-      dot.className    = 'active';
-      text.textContent = 'Link active';
-      text.style.color = '#00ff88';
+
+      if (_tileJob !== job) return; // job changed while fetching
+
+      if (isStalePosting) {
+        // Link reachable but posting is old — yellow
+        _spawnTile('status-yellow', 'yellow', 'Posting may be stale', 'yellow', age.text, age.color, job.url);
+      } else {
+        _spawnTile('status-green', 'green', 'Link active', 'green', age.text, age.color, job.url);
+      }
     } catch(e) {
-      if (e.name === 'AbortError') return; // navigated away, ignore
-      dot.className    = 'down';
-      text.textContent = 'May be unavailable';
-      text.style.color = '#ff6b6b';
+      if (e.name === 'AbortError') return;
+      if (_tileJob !== job) return;
+
+      if (!job.created) {
+        // Can't verify and no date — yellow
+        _spawnTile('status-yellow', 'yellow', 'Cannot verify', 'yellow', age.text, age.color, job.url);
+      } else {
+        _spawnTile('status-red', 'red', 'May be unavailable', 'red', age.text, age.color, job.url);
+      }
     }
   }
 
   function resetLinkTracker() {
+    _tileJob = null;
     if (linkCheckAbort) { linkCheckAbort.abort(); linkCheckAbort = null; }
-    const dot     = document.getElementById('link-status-dot');
-    const text    = document.getElementById('link-status-text');
-    const ageEl   = document.getElementById('link-age-text');
-    const openBtn = document.getElementById('link-open-btn');
-    dot.className       = '';
-    dot.style.background = 'rgba(255,255,255,0.15)';
-    text.textContent    = '—';
-    text.style.color    = 'rgba(255,255,255,0.55)';
-    ageEl.textContent   = '—';
-    ageEl.style.color   = 'rgba(255,255,255,0.3)';
-    openBtn.href        = '#';
+    const stage = document.getElementById('link-tile-stage');
+    if (stage) stage.innerHTML = '';
   }
 
   // ── Freshness helper ─────────────────────────────────────────────────────
@@ -711,9 +764,9 @@
     // rx="1.5" keeps corners just barely rounded so it reads as a sharp diamond, not a blob.
     el.innerHTML = `
       <svg width="28" height="28" viewBox="0 0 28 28" style="display:block;overflow:visible">
-        <rect x="10.5" y="10.5" width="13" height="13" rx="1.5"
+        <rect x="11.5" y="11.5" width="11" height="11" rx="1.5"
               fill="rgba(0,255,136,0.32)" transform="rotate(45 17 17)"/>
-        <rect x="4.5" y="4.5" width="13" height="13" rx="1.5"
+        <rect x="5.5" y="5.5" width="11" height="11" rx="1.5"
               fill="#00ff88" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"
               transform="rotate(45 11 11)"/>
       </svg>`;
