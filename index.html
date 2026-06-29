@@ -11,6 +11,20 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Labor Network"/>
   <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <link rel="canonical" href="https://coreydevfw.github.io/labor-network/"/>
+  <!-- Open Graph / Social -->
+  <meta property="og:type"        content="website"/>
+  <meta property="og:url"         content="https://coreydevfw.github.io/labor-network/"/>
+  <meta property="og:title"       content="Labor Network — Hyperlocal Jobs in DFW"/>
+  <meta property="og:description" content="Find warehouse, manufacturing, trades, retail, and more jobs near you in the Dallas-Fort Worth area. Real-time commute times. No account needed."/>
+  <meta property="og:image"       content="https://coreydevfw.github.io/labor-network/og-image.png"/>
+  <!-- Twitter Card -->
+  <meta name="twitter:card"        content="summary_large_image"/>
+  <meta name="twitter:title"       content="Labor Network — Hyperlocal Jobs in DFW"/>
+  <meta name="twitter:description" content="Find jobs near you in Dallas-Fort Worth with real-time commute estimates."/>
+  <meta name="twitter:image"       content="https://coreydevfw.github.io/labor-network/og-image.png"/>
   <!-- Google Analytics (GA4) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LTCHQGLGCY"></script>
   <script>
@@ -296,6 +310,74 @@
     .popup-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:4px; line-height:1.3; padding-right:16px; }
     .popup-company { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:10px; }
     .popup-apply { display:inline-block; font-size:12px; font-weight:600; color:#0a0a0a; background:#00ff88; border-radius:6px; padding:5px 12px; text-decoration:none; }
+    /* ── Flythrough overlay ── */
+    #flythrough-overlay {
+      display: none; position: absolute; inset: 0; z-index: 10;
+      pointer-events: none;
+    }
+    #flythrough-overlay.active { display: block; }
+    #ft-top {
+      position: absolute; top: 0; left: 0; right: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%);
+      padding: 16px 14px 36px;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      pointer-events: auto;
+    }
+    #ft-eta-time { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -0.03em; line-height: 1; }
+    #ft-eta-sub  { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 3px; }
+    #ft-top-right { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    #ft-exit-btn {
+      background: rgba(255,107,107,0.15); border: 1px solid rgba(255,107,107,0.4);
+      color: #ff6b6b; font-size: 10px; font-weight: 800; font-family: inherit;
+      border-radius: 8px; padding: 6px 10px; cursor: pointer; letter-spacing: 0.04em;
+    }
+    #ft-turn-banner {
+      position: absolute; left: 14px; right: 14px; top: 88px;
+      background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px); border-radius: 10px;
+      padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+      pointer-events: none;
+    }
+    #ft-turn-arrow-box {
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.3);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+    #ft-turn-dist   { font-size: 11px; font-weight: 700; color: #00ff88; }
+    #ft-turn-street { font-size: 13px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ft-drawer {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(to top, rgba(8,8,14,0.97) 0%, rgba(8,8,14,0.9) 78%, transparent 100%);
+      padding: 30px 14px 16px;
+      pointer-events: auto;
+    }
+    #ft-drawer-handle { width: 32px; height: 3px; background: rgba(255,255,255,0.18); border-radius: 2px; margin: 0 auto 12px; }
+    #ft-dest { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    #ft-dest-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff6b6b; flex-shrink: 0; }
+    #ft-dest-title { font-size: 12px; font-weight: 800; color: #fff; }
+    #ft-dest-co { font-size: 9px; font-weight: 700; color: #00ff88; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7; }
+    #ft-step-list { max-height: 116px; overflow-y: auto; scrollbar-width: none; }
+    #ft-step-list::-webkit-scrollbar { display: none; }
+    .ft-step {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.2s;
+    }
+    .ft-step:last-child { border-bottom: none; }
+    .ft-step.ft-step-active { background: rgba(0,255,136,0.05); margin: 0 -14px; padding: 6px 14px; }
+    .ft-step-icon {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: rgba(255,255,255,0.06); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ft-step-icon.active { background: rgba(0,255,136,0.14); }
+    .ft-step-text { flex: 1; font-size: 11px; color: rgba(255,255,255,0.5); line-height: 1.3; }
+    .ft-step.ft-step-active .ft-step-text { color: rgba(255,255,255,0.85); }
+    .ft-step-dist { font-size: 10px; color: rgba(255,255,255,0.3); flex-shrink: 0; }
+    #ft-progress-bar { height: 3px; background: rgba(255,255,255,0.07); border-radius: 2px; margin: 10px 0 4px; overflow: hidden; }
+    #ft-progress-fill { height: 100%; width: 0%; background: #00ff88; border-radius: 2px; transition: width 0.4s ease; }
+    #ft-progress-row { display: flex; justify-content: space-between; font-size: 8px; color: rgba(255,255,255,0.25); }
+
     @media (max-width:640px) {
       #app { flex-direction:column; }
       #sidebar { width:100%; min-width:unset; height:auto; max-height:50dvh; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); }
@@ -480,6 +562,44 @@ Lyft
     <div id="location-banner">
       📍 Share your location for a tighter radius
       <button onclick="requestLocation()">Allow</button>
+    </div>
+
+    <!-- ── Flythrough overlay — shown on double-tap of any commute mode tile ── -->
+    <div id="flythrough-overlay">
+      <div id="ft-top">
+        <div>
+          <div id="ft-eta-time">—</div>
+          <div id="ft-eta-sub">—</div>
+        </div>
+        <div id="ft-top-right">
+          <div id="ft-mode-chip"></div>
+          <button id="ft-exit-btn" onclick="stopFlythrough()">✕ Exit</button>
+        </div>
+      </div>
+      <div id="ft-turn-banner">
+        <div id="ft-turn-arrow-box"></div>
+        <div>
+          <div id="ft-turn-dist">—</div>
+          <div id="ft-turn-street">—</div>
+        </div>
+      </div>
+      <div id="ft-drawer">
+        <div id="ft-drawer-handle"></div>
+        <div id="ft-dest">
+          <div id="ft-dest-dot"></div>
+          <div>
+            <div id="ft-dest-title">—</div>
+            <div id="ft-dest-co">—</div>
+          </div>
+        </div>
+        <div id="ft-step-list"></div>
+        <div id="ft-progress-bar"><div id="ft-progress-fill"></div></div>
+        <div id="ft-progress-row">
+          <span>Start</span>
+          <span id="ft-progress-pct">0% complete</span>
+          <span id="ft-total-dist">—</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -820,7 +940,7 @@ Lyft
     const key = `${mode}|${destination[0]},${destination[1]}`;
     if (routeCache[key]) return routeCache[key];
     const profile = mode === 'cycling' ? 'cycling' : mode === 'walking' ? 'walking' : 'driving-traffic';
-    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${CENTER[0]},${CENTER[1]};${destination[0]},${destination[1]}?access_token=${mapboxgl.accessToken}&geometries=geojson&overview=full&annotations=congestion`;
+    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${CENTER[0]},${CENTER[1]};${destination[0]},${destination[1]}?access_token=${mapboxgl.accessToken}&geometries=geojson&overview=full&annotations=congestion&steps=true`;
     try {
       const res = await fetch(url);
       const data = await res.json();
@@ -948,11 +1068,181 @@ Lyft
     }
   }
 
+  let _lastModeTap = { mode: null, time: 0 };
+
   function selectMode(mode) {
+    const now = Date.now();
+    if (_lastModeTap.mode === mode && (now - _lastModeTap.time) < 600) {
+      // Double-tap — launch flythrough
+      _lastModeTap = { mode: null, time: 0 };
+      startFlythrough(mode);
+      return;
+    }
+    _lastModeTap = { mode, time: now };
+
     activeMode = mode;
     document.querySelectorAll('.commute-mode').forEach(el => el.classList.remove('active'));
     document.getElementById(`mode-${mode}`).classList.add('active');
     if (currentJob) drawRoute(mode, [currentJob.lng, currentJob.lat]);
+  }
+
+  // ── Flythrough ────────────────────────────────────────────────────────────
+  let ftAnimId   = null;
+  let ftActive   = false;
+  let ftCoords   = [];
+  let ftCoordIdx = 0;
+  let ftSteps    = [];
+  let ftStepIdx  = 0;
+  let ftSavedPitch = 0;
+  let ftSavedBearing = 0;
+
+  const FT_MODE_CFG = {
+    driving: { color: '#63b3ed', label: 'Drive',  step: 4, zoom: 16.5 },
+    walking: { color: '#ffb347', label: 'Walk',   step: 2, zoom: 17   },
+    cycling: { color: '#68d391', label: 'Bike',   step: 3, zoom: 16.5 },
+  };
+
+  function _ftManeuverIcon(maneuver) {
+    const mod  = maneuver?.modifier || '';
+    const type = maneuver?.type || '';
+    const stroke = (active) => active ? '#00ff88' : 'rgba(255,255,255,0.45)';
+    if (type === 'arrive') return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${stroke(false)}" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="3"/><path d="M12 22V8"/></svg>`;
+    if (mod.includes('left'))  return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${stroke(false)}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
+    if (mod.includes('right')) return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${stroke(false)}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
+    if (mod === 'uturn') return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${stroke(false)}" stroke-width="2" stroke-linecap="round"><path d="M3 12V7a5 5 0 0110 0v10"/><path d="M9 16l4 4 4-4"/></svg>`;
+    return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${stroke(false)}" stroke-width="2" stroke-linecap="round"><path d="M12 22V2M12 2l-4 4M12 2l4 4"/></svg>`;
+  }
+
+  function _ftBearing(from, to) {
+    const r = Math.PI / 180;
+    const y = Math.sin((to[0] - from[0]) * r) * Math.cos(to[1] * r);
+    const x = Math.cos(from[1] * r) * Math.sin(to[1] * r) -
+              Math.sin(from[1] * r) * Math.cos(to[1] * r) * Math.cos((to[0] - from[0]) * r);
+    return (Math.atan2(y, x) / r + 360) % 360;
+  }
+
+  function _ftDistLabel(meters) {
+    const ft = Math.round(meters * 3.28084);
+    return ft < 900 ? `${ft} ft` : `${(ft / 5280).toFixed(1)} mi`;
+  }
+
+  function _ftUpdateTurnBanner(stepIdx) {
+    if (!ftSteps.length) return;
+    const step = ftSteps[Math.min(stepIdx, ftSteps.length - 1)];
+    const nextStep = ftSteps[Math.min(stepIdx + 1, ftSteps.length - 1)];
+    const target = nextStep || step;
+    document.getElementById('ft-turn-dist').textContent = `In ${_ftDistLabel(step.distance || 0)}`;
+    document.getElementById('ft-turn-street').textContent = target.maneuver?.instruction || target.name || '—';
+    // Rotate arrow icon
+    document.getElementById('ft-turn-arrow-box').innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        ${(target.maneuver?.modifier || '').includes('left') ? '<path d="M15 18l-6-6 6-6"/>' :
+          (target.maneuver?.modifier || '').includes('right') ? '<path d="M9 18l6-6-6-6"/>' :
+          '<path d="M12 22V2M12 2l-4 4M12 2l4 4"/>'}
+      </svg>`;
+    // Highlight active step in list
+    document.querySelectorAll('.ft-step').forEach((el, i) => {
+      el.classList.toggle('ft-step-active', i === stepIdx);
+      const icon = el.querySelector('.ft-step-icon');
+      if (icon) icon.classList.toggle('active', i === stepIdx);
+    });
+    const activeStepEl = document.querySelector(`.ft-step[data-idx="${stepIdx}"]`);
+    if (activeStepEl) activeStepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function startFlythrough(mode) {
+    if (!currentJob) return;
+    const cfg = FT_MODE_CFG[mode];
+    if (!cfg) return;
+
+    const dest = [currentJob.lng, currentJob.lat];
+
+    // Force a fresh fetch so we're guaranteed to have steps
+    const routeKey = `${mode}|${dest[0]},${dest[1]}`;
+    delete routeCache[routeKey];
+    const route = await fetchRoute(mode, dest);
+    if (!route || !route.geometry?.coordinates?.length) return;
+
+    ftActive   = true;
+    ftCoords   = route.geometry.coordinates;
+    ftCoordIdx = 0;
+    ftStepIdx  = 0;
+    ftSteps    = route.legs?.[0]?.steps || [];
+    ftSavedPitch   = map.getPitch();
+    ftSavedBearing = map.getBearing();
+
+    // ── Populate overlay ──────────────────────────────────────────────────
+    const distMi    = (route.distance * 0.000621371).toFixed(1);
+    const arrival   = new Date(Date.now() + route.duration * 1000);
+    const arrivalStr = arrival.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    document.getElementById('ft-eta-time').textContent = formatTime(route.duration);
+    document.getElementById('ft-eta-sub').textContent  = `${distMi} mi · Arrive ${arrivalStr}`;
+    document.getElementById('ft-total-dist').textContent = `${distMi} mi`;
+    document.getElementById('ft-dest-title').textContent = currentJob.title;
+    document.getElementById('ft-dest-co').textContent    = currentJob.company;
+    document.getElementById('ft-mode-chip').innerHTML = `
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+        color:${cfg.color};background:${cfg.color}1a;border:1px solid ${cfg.color}55;
+        border-radius:20px;padding:4px 10px">${cfg.label}</span>`;
+
+    // Steps list
+    const stepList = document.getElementById('ft-step-list');
+    stepList.innerHTML = '';
+    ftSteps.forEach((step, i) => {
+      const div = document.createElement('div');
+      div.className = 'ft-step' + (i === 0 ? ' ft-step-active' : '');
+      div.dataset.idx = i;
+      div.innerHTML = `
+        <div class="ft-step-icon ${i === 0 ? 'active' : ''}">${_ftManeuverIcon(step.maneuver)}</div>
+        <div class="ft-step-text">${step.maneuver?.instruction || step.name || '—'}</div>
+        <div class="ft-step-dist">${_ftDistLabel(step.distance || 0)}</div>`;
+      stepList.appendChild(div);
+    });
+
+    _ftUpdateTurnBanner(0);
+
+    document.getElementById('flythrough-overlay').classList.add('active');
+    trackEvent('flythrough_start', { mode, distance_mi: distMi });
+
+    // Pitch and zoom camera, then start animation
+    map.easeTo({ pitch: 72, zoom: cfg.zoom, duration: 900, easing: t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t });
+    setTimeout(_ftTick, 950);
+  }
+
+  function _ftTick() {
+    if (!ftActive) return;
+    if (ftCoordIdx >= ftCoords.length - 1) { stopFlythrough(); return; }
+
+    const cfg     = FT_MODE_CFG[activeMode] || FT_MODE_CFG.driving;
+    const current = ftCoords[ftCoordIdx];
+    const ahead   = ftCoords[Math.min(ftCoordIdx + 3, ftCoords.length - 1)];
+    const bearing = _ftBearing(current, ahead);
+
+    map.jumpTo({ center: current, bearing, pitch: 72, zoom: cfg.zoom });
+
+    // Progress
+    const pct = Math.round((ftCoordIdx / (ftCoords.length - 1)) * 100);
+    document.getElementById('ft-progress-fill').style.width = `${pct}%`;
+    document.getElementById('ft-progress-pct').textContent  = `${pct}% complete`;
+
+    // Advance active step
+    const newStepIdx = Math.min(Math.floor(pct / 100 * ftSteps.length), ftSteps.length - 1);
+    if (newStepIdx !== ftStepIdx) {
+      ftStepIdx = newStepIdx;
+      _ftUpdateTurnBanner(ftStepIdx);
+    }
+
+    ftCoordIdx += cfg.step;
+    ftAnimId = setTimeout(_ftTick, 90);
+  }
+
+  function stopFlythrough() {
+    ftActive = false;
+    if (ftAnimId) { clearTimeout(ftAnimId); ftAnimId = null; }
+    document.getElementById('flythrough-overlay').classList.remove('active');
+    map.easeTo({ pitch: 50, bearing: 0, duration: 700 });
+    trackEvent('flythrough_stop', { pct_complete: ftCoordIdx && ftCoords.length ? Math.round(ftCoordIdx / ftCoords.length * 100) : 0 });
   }
 
   function openDartTripPlanner() {
