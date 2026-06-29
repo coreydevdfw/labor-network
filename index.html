@@ -144,8 +144,8 @@
       background: #0c0c0c; display: none; flex-direction: column; padding: 12px 14px; gap: 10px;
     }
     #commute-panel.visible { display: flex; }
-    #commute-job-title { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; }
-    #commute-job-company { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    #commute-job-title { font-size: 13px; font-weight: 800; color: #fff; line-height: 1.2; letter-spacing: -0.01em; }
+    #commute-job-company { font-size: 9px; font-weight: 700; color: #00ff88; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7; margin-top: 2px; }
     #commute-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
     #ride-links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     #uber-link, #lyft-link {
@@ -176,99 +176,60 @@
     #commute-close { position: absolute; right: 12px; top: 12px; background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 16px; padding: 2px; }
     /* ── Traffic gauge + link tracker row ── */
     #commute-bottom-row {
-      display: flex; gap: 10px; align-items: stretch;
+      display: flex; flex-direction: column; gap: 0;
     }
-    #traffic-gauge-wrap {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      flex-shrink: 0;
+    /* Full-width traffic strip */
+    #traffic-strip {
+      background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.15);
+      border-radius: 9px; padding: 8px 11px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
     }
+    #traffic-strip-left { display: flex; flex-direction: column; gap: 2px; }
+    #traffic-strip-header {
+      font-size: 8px; font-weight: 800; letter-spacing: 0.07em;
+      text-transform: uppercase; color: #00ff88;
+    }
+    #traffic-gauge-label {
+      font-size: 13px; font-weight: 800; color: #fff; letter-spacing: -0.01em;
+      transition: color 0.4s ease; white-space: nowrap;
+    }
+    #traffic-strip-sub {
+      font-size: 9px; color: rgba(255,255,255,0.3); white-space: nowrap;
+    }
+    #traffic-strip-right {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0;
+    }
+    #traffic-gauge-wrap { display: block; }
     #traffic-gauge { display: block; overflow: visible; }
     #gauge-needle-g {
       transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    #traffic-gauge-label {
-      font-size: 10px; font-weight: 600;
-      color: rgba(255,255,255,0.35);
-      transition: color 0.4s ease;
-      white-space: nowrap;
+    /* Link status pill inside the traffic strip */
+    #link-status-pill {
+      display: flex; align-items: center; gap: 4px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 3px 8px; transition: all 0.3s;
     }
+    #link-status-pill.green  { background: rgba(0,255,136,0.1);  border-color: rgba(0,255,136,0.3); }
+    #link-status-pill.yellow { background: rgba(255,193,7,0.1);  border-color: rgba(255,193,7,0.3); }
+    #link-status-pill.red    { background: rgba(255,107,107,0.1); border-color: rgba(255,107,107,0.3); }
+    #link-pill-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.2); flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    #link-pill-dot.checking { background: #ffc107; animation: tilePulse 0.8s infinite; }
+    #link-pill-dot.green    { background: #00ff88; }
+    #link-pill-dot.yellow   { background: #ffc107; }
+    #link-pill-dot.red      { background: #ff6b6b; }
+    #link-pill-text {
+      font-size: 8px; font-weight: 700; color: rgba(255,255,255,0.5);
+      white-space: nowrap; transition: color 0.3s;
+    }
+    #link-pill-text.green  { color: #00ff88; }
+    #link-pill-text.yellow { color: #ffc107; }
+    #link-pill-text.red    { color: #ff6b6b; }
     /* ── Link tracker ── */
-    #link-tracker {
-      flex: 1; background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 9px;
-      padding: 9px 11px; display: flex; flex-direction: column;
-      gap: 6px; min-width: 0; overflow: hidden;
-    }
-    #link-tracker-header {
-      font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
-      text-transform: uppercase; color: #00ff88; flex-shrink: 0;
-    }
-    #link-tile-stage {
-      flex: 1; position: relative; overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
-      min-height: 52px;
-    }
-    .link-tile {
-      position: absolute; width: 100%; box-sizing: border-box;
-      border-radius: 7px; padding: 6px 8px;
-      display: flex; flex-direction: column; gap: 3px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.04);
-      transform: translateY(-40px); opacity: 0;
-      animation: tileEnter 0.35s cubic-bezier(0.34,1.4,0.64,1) forwards;
-    }
-    .link-tile.tile-exit {
-      animation: tileFall 0.5s cubic-bezier(0.55,0,1,0.45) forwards;
-    }
-    .link-tile.status-green  { border-color: rgba(0,255,136,0.35); background: rgba(0,255,136,0.07); }
-    .link-tile.status-yellow { border-color: rgba(255,193,7,0.35);  background: rgba(255,193,7,0.06); }
-    .link-tile.status-red    { border-color: rgba(255,107,107,0.35);background: rgba(255,107,107,0.06); }
-    .link-tile.status-checking { border-color: rgba(255,255,255,0.08); }
-    @keyframes tileEnter {
-      0%   { transform: translateY(-40px); opacity: 0; }
-      100% { transform: translateY(0);     opacity: 1; }
-    }
-    @keyframes tileFall {
-      0%   { transform: translateY(0)    scaleY(1);    opacity: 1; }
-      30%  { transform: translateY(4px)  scaleY(0.96); opacity: 1; }
-      100% { transform: translateY(60px) scaleY(0.8);  opacity: 0; }
-    }
-    .tile-status-row { display: flex; align-items: center; gap: 5px; }
-    .tile-dot {
-      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-      background: rgba(255,255,255,0.2);
-    }
-    .tile-dot.checking { background: #ffc107; animation: tilePulse 0.8s infinite; }
-    .tile-dot.green    { background: #00ff88; }
-    .tile-dot.yellow   { background: #ffc107; }
-    .tile-dot.red      { background: #ff6b6b; }
     @keyframes tilePulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
-    .tile-status-label {
-      font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
-      color: rgba(255,255,255,0.7);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .tile-status-label.green  {
-      color: #00ff88;
-      text-shadow: 1px 1px 0 rgba(0,255,136,0.25), 2px 2px 0 rgba(0,255,136,0.1);
-    }
-    .tile-status-label.yellow {
-      color: #ffc107;
-      text-shadow: 1px 1px 0 rgba(255,193,7,0.25), 2px 2px 0 rgba(255,193,7,0.1);
-    }
-    .tile-status-label.red    {
-      color: #ff6b6b;
-      text-shadow: 1px 1px 0 rgba(255,107,107,0.25), 2px 2px 0 rgba(255,107,107,0.1);
-    }
-    .tile-meta-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 4px;
-    }
-    .tile-age { font-size: 9px; color: rgba(255,255,255,0.28); }
-    .tile-open {
-      font-size: 9px; font-weight: 700; color: #00ff88;
-      text-decoration: none; opacity: 0.7; transition: opacity 0.15s; flex-shrink: 0;
-    }
-    .tile-open:hover { opacity: 1; text-decoration: underline; }
     /* ── List section ── */
     #list-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     #count-bar { padding: 8px 14px 6px; font-size: 11px; color: rgba(255,255,255,0.35); flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
@@ -288,8 +249,8 @@
     }
     .job-card:hover { background: rgba(255,255,255,0.06); transform: translateX(2px); }
     .job-card.active { background: rgba(255,255,255,0.08); }
-    .card-title { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 3px; line-height: 1.35; }
-    .card-company { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .card-title { font-size: 11px; font-weight: 800; color: #fff; margin-bottom: 2px; line-height: 1.25; letter-spacing: 0.01em; }
+    .card-company { font-size: 9px; font-weight: 700; color: #00ff88; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.65; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
     .card-footer { display: flex; align-items: center; justify-content: space-between; }
     .card-drivetime {
       display: flex; align-items: center; gap: 5px; margin-bottom: 5px;
@@ -494,37 +455,34 @@ Lyft
         </a>
       </div>
 
-      <!-- ── Bottom row: traffic gauge (left) + link tracker (right) ── -->
+      <!-- ── Bottom row: full-width traffic strip with gauge + link pill ── -->
       <div id="commute-bottom-row">
-
-        <!-- Traffic gauge: SVG semi-circle speedometer with animated needle -->
-        <div id="traffic-gauge-wrap">
-          <svg id="traffic-gauge" viewBox="0 0 80 48" width="80" height="48" style="overflow:visible">
-            <!-- Dim arc zones — always visible as scale reference -->
-            <path d="M 8 44 A 32 32 0 0 1 24 16.3" fill="none" stroke="#00ff88" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
-            <path d="M 24 16.3 A 32 32 0 0 1 56 16.3" fill="none" stroke="#ffc107" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
-            <path d="M 56 16.3 A 32 32 0 0 1 72 44" fill="none" stroke="#ff6b6b" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
-            <!-- Active zone highlight — brightened by JS -->
-            <path id="gauge-arc-active" d="" fill="none" stroke="#00ff88" stroke-width="5" stroke-linecap="round" opacity="0"/>
-            <!-- Needle group — rotated by JS around center hub (40,44) -->
-            <g id="gauge-needle-g" style="transform-origin:40px 44px; transform:rotate(-90deg)">
-              <line x1="40" y1="44" x2="40" y2="15"
-                    stroke="rgba(255,255,255,0.88)" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="40" cy="15" r="2" fill="rgba(255,255,255,0.6)"/>
-            </g>
-            <!-- Center hub — color-coded to traffic level -->
-            <circle id="gauge-hub" cx="40" cy="44" r="4"
-                    fill="#2a2a2a" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
-          </svg>
-          <div id="traffic-gauge-label">Checking traffic…</div>
+        <div id="traffic-strip">
+          <div id="traffic-strip-left">
+            <div id="traffic-strip-header">Traffic</div>
+            <div id="traffic-gauge-label">Checking…</div>
+            <div id="traffic-strip-sub"></div>
+          </div>
+          <div id="traffic-strip-right">
+            <div id="traffic-gauge-wrap">
+              <svg id="traffic-gauge" viewBox="0 0 80 48" width="52" height="32" style="overflow:visible">
+                <path d="M 8 44 A 32 32 0 0 1 24 16.3" fill="none" stroke="#00ff88" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
+                <path d="M 24 16.3 A 32 32 0 0 1 56 16.3" fill="none" stroke="#ffc107" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
+                <path d="M 56 16.3 A 32 32 0 0 1 72 44" fill="none" stroke="#ff6b6b" stroke-width="5" stroke-linecap="round" opacity="0.18"/>
+                <path id="gauge-arc-active" d="" fill="none" stroke="#00ff88" stroke-width="5" stroke-linecap="round" opacity="0"/>
+                <g id="gauge-needle-g" style="transform-origin:40px 44px; transform:rotate(-90deg)">
+                  <line x1="40" y1="44" x2="40" y2="15" stroke="rgba(255,255,255,0.88)" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="40" cy="15" r="2" fill="rgba(255,255,255,0.6)"/>
+                </g>
+                <circle id="gauge-hub" cx="40" cy="44" r="4" fill="#2a2a2a" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <div id="link-status-pill">
+              <span id="link-pill-dot"></span>
+              <span id="link-pill-text">—</span>
+            </div>
+          </div>
         </div>
-
-        <!-- Link tracker: animated tile per job posting -->
-        <div id="link-tracker">
-          <div id="link-tracker-header">Link Status</div>
-          <div id="link-tile-stage"></div>
-        </div>
-
       </div>
     </div>
 
@@ -677,6 +635,9 @@ Lyft
     hub.setAttribute('fill', cfg.color);
     label.textContent  = cfg.label;
     label.style.color  = cfg.color;
+    // Strip is already green-tinted; update border color to match traffic level
+    const strip = document.getElementById('traffic-strip');
+    if (strip) strip.style.borderColor = cfg.color === '#00ff88' ? 'rgba(0,255,136,0.2)' : cfg.color === '#ffc107' ? 'rgba(255,193,7,0.2)' : 'rgba(255,107,107,0.2)';
   }
 
   function resetGauge() {
@@ -689,8 +650,10 @@ Lyft
     arcActive.setAttribute('d',      '');
     arcActive.setAttribute('opacity','0');
     hub.setAttribute('fill', '#2a2a2a');
-    label.textContent = 'Checking traffic…';
+    label.textContent = 'Checking…';
     label.style.color = 'rgba(255,255,255,0.35)';
+    const strip = document.getElementById('traffic-strip');
+    if (strip) strip.style.borderColor = 'rgba(0,255,136,0.15)';
   }
 
   // ── Link tracker ──────────────────────────────────────────────────────────
@@ -712,36 +675,20 @@ Lyft
     return               { text: `${days}d ago`,            color: '#ff6b6b' };
   }
 
-  function _spawnTile(statusClass, dotClass, labelText, labelClass, ageText, ageColor, url) {
-    const stage = document.getElementById('link-tile-stage');
-    if (!stage) return;
-
-    // Drop any existing tile
-    const old = stage.querySelector('.link-tile');
-    if (old && !old.classList.contains('tile-exit')) {
-      old.classList.add('tile-exit');
-      old.addEventListener('animationend', () => old.remove(), { once: true });
-    }
-
-    const tile = document.createElement('div');
-    tile.className = `link-tile ${statusClass}`;
-    tile.innerHTML = `
-      <div class="tile-status-row">
-        <span class="tile-dot ${dotClass}"></span>
-        <span class="tile-status-label ${labelClass}">${labelText}</span>
-      </div>
-      <div class="tile-meta-row">
-        <span class="tile-age" style="color:${ageColor}">${ageText}</span>
-        ${url ? `<a class="tile-open" href="${url}" target="_blank" rel="noopener">Open →</a>` : ''}
-      </div>`;
-    stage.appendChild(tile);
-    return tile;
+  function _setPill(dotClass, labelText, pillClass) {
+    const dot  = document.getElementById('link-pill-dot');
+    const text = document.getElementById('link-pill-text');
+    const pill = document.getElementById('link-status-pill');
+    if (!dot || !text || !pill) return;
+    dot.className  = dotClass;
+    text.className = dotClass;
+    text.textContent = labelText;
+    pill.className = pillClass ? `${pillClass}` : '';
   }
 
   async function updateLinkTracker(job) {
     _tileJob = job;
 
-    // Abort any previous in-flight check
     if (linkCheckAbort) linkCheckAbort.abort();
     linkCheckAbort = new AbortController();
 
@@ -750,10 +697,12 @@ Lyft
       ? (Date.now() - new Date(job.created).getTime()) > 30 * 864e5
       : false;
 
-    // Show checking tile
-    _spawnTile('status-checking', 'checking', 'Checking…', '', age.text, age.color, job.url);
+    // Update sub-label with posting age
+    const sub = document.getElementById('traffic-strip-sub');
+    if (sub) sub.textContent = age.text;
 
-    // Hold checking tile visible long enough to see the drop animation
+    _setPill('checking', 'Checking…', '');
+
     const minDelay = new Promise(r => setTimeout(r, 900));
     let fetchOk = true;
 
@@ -772,15 +721,15 @@ Lyft
 
     if (fetchOk) {
       if (isStalePosting) {
-        _spawnTile('status-yellow', 'yellow', 'Posting may be stale', 'yellow', age.text, age.color, job.url);
+        _setPill('yellow', 'May be stale', 'yellow');
       } else {
-        _spawnTile('status-green', 'green', 'Link active', 'green', age.text, age.color, job.url);
+        _setPill('green', 'Link active', 'green');
       }
     } else {
       if (!job.created) {
-        _spawnTile('status-yellow', 'yellow', 'Cannot verify', 'yellow', age.text, age.color, job.url);
+        _setPill('yellow', 'Unverified', 'yellow');
       } else {
-        _spawnTile('status-red', 'red', 'May be unavailable', 'red', age.text, age.color, job.url);
+        _setPill('red', 'Unavailable', 'red');
       }
     }
   }
@@ -788,8 +737,9 @@ Lyft
   function resetLinkTracker() {
     _tileJob = null;
     if (linkCheckAbort) { linkCheckAbort.abort(); linkCheckAbort = null; }
-    const stage = document.getElementById('link-tile-stage');
-    if (stage) stage.innerHTML = '';
+    _setPill('', '—', '');
+    const sub = document.getElementById('traffic-strip-sub');
+    if (sub) sub.textContent = '';
   }
 
   // ── Freshness helper ─────────────────────────────────────────────────────
@@ -831,31 +781,50 @@ Lyft
     if (activeFilter !== 'placeholder') { renderSidebar(); updateMapLayer(); }
   }
 
+  let _watchId = null;
+
   function requestLocation() {
     if (!navigator.geolocation) return;
     const btn = document.getElementById('locate-btn');
     document.getElementById('location-banner').classList.remove('show');
     btn.classList.add('locating');
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Locating…`;
-    navigator.geolocation.getCurrentPosition(async pos => {
-      CENTER = [pos.coords.longitude, pos.coords.latitude];
+
+    // Clear any existing watch before starting a new one
+    if (_watchId !== null) { navigator.geolocation.clearWatch(_watchId); _watchId = null; }
+
+    let initialFix = true;
+
+    _watchId = navigator.geolocation.watchPosition(async pos => {
+      const coords = [pos.coords.longitude, pos.coords.latitude];
       const accuracy = Math.round(pos.coords.accuracy);
-      userLocated = true;
-      map.flyTo({ center: CENTER, zoom: 13, pitch: 45, duration: 1400 });
-      updateCircle();
-      placeUserMarker(CENTER);
-      btn.classList.remove('locating');
-      btn.classList.add('located');
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Located (±${accuracy}m)`;
-      trackEvent('location_set', { method: 'gps', accuracy_meters: accuracy });
-      routeCache = {};
-      await refetchJobsAroundCenter();
+
+      // Always update pin and circle live
+      placeUserMarker(coords);
+
+      if (initialFix) {
+        // First fix — fly to location, fetch jobs, update button
+        initialFix = false;
+        CENTER = coords;
+        userLocated = true;
+        map.flyTo({ center: CENTER, zoom: 13, pitch: 45, duration: 1400 });
+        updateCircle();
+        btn.classList.remove('locating');
+        btn.classList.add('located');
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Located (±${accuracy}m)`;
+        trackEvent('location_set', { method: 'gps', accuracy_meters: accuracy });
+        routeCache = {};
+        await refetchJobsAroundCenter();
+      } else {
+        // Subsequent fixes — just move the pin, update accuracy in button
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Located (±${accuracy}m)`;
+      }
     }, (err) => {
       btn.classList.remove('locating');
       btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.35"/></svg> Share location`;
       console.warn('Geolocation error:', err.message);
       alert('Location access was blocked or unavailable. You can still browse jobs in the default DFW area, or enable location permissions and try again.');
-    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    }, { enableHighAccuracy: true, maximumAge: 0 });
   }
 
   document.getElementById('locate-btn').addEventListener('click', requestLocation);
