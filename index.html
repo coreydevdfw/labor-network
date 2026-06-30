@@ -840,9 +840,11 @@ Lyft
       if (initialFix) {
         // First fix — fly to location, fetch jobs, update button
         initialFix = false;
+        const wasLocated = userLocated;
         CENTER = coords;
         userLocated = true;
-        map.flyTo({ center: CENTER, zoom: 13, pitch: 45, duration: 1400 });
+        // Only fly camera if this is a fresh location grant, not a re-tap of the button
+        if (!wasLocated) map.flyTo({ center: CENTER, zoom: 13, pitch: 45, duration: 1400 });
         updateCircle();
         btn.classList.remove('locating');
         btn.classList.add('located');
@@ -1072,7 +1074,7 @@ Lyft
 
   function selectMode(mode) {
     const now = Date.now();
-    if (_lastModeTap.mode === mode && (now - _lastModeTap.time) < 600) {
+    if (_lastModeTap.mode === mode && (now - _lastModeTap.time) < 350) {
       // Double-tap — launch flythrough
       _lastModeTap = { mode: null, time: 0 };
       startFlythrough(mode);
@@ -1246,7 +1248,11 @@ Lyft
     ftActive = false;
     if (ftAnimId) { clearTimeout(ftAnimId); ftAnimId = null; }
     document.getElementById('flythrough-overlay').classList.remove('active');
-    map.easeTo({ pitch: 50, bearing: 0, duration: 700 });
+    // Return camera to user's actual location, not wherever the route animation left it
+    const returnCenter = (userLocated && userMarker)
+      ? userMarker.getLngLat().toArray()
+      : CENTER;
+    map.easeTo({ center: returnCenter, pitch: 50, bearing: 0, zoom: 13, duration: 700 });
     trackEvent('flythrough_stop', { pct_complete: ftCoordIdx && ftCoords.length ? Math.round(ftCoordIdx / ftCoords.length * 100) : 0 });
   }
 
