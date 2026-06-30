@@ -966,7 +966,7 @@ Lyft
 
     let initialFix = true;
 
-    _watchId = navigator.geolocation.watchPosition(async pos => {
+    const _onPos = async pos => {
       const coords = [pos.coords.longitude, pos.coords.latitude];
       const accuracy = Math.round(pos.coords.accuracy);
 
@@ -981,7 +981,6 @@ Lyft
         const wasLocated = userLocated;
         CENTER = coords;
         userLocated = true;
-        // Only fly camera if this is a fresh location grant, not a re-tap of the button
         if (!wasLocated) map.flyTo({ center: CENTER, zoom: 13, pitch: 45, duration: 1400 });
         updateCircle();
         btn.classList.remove('locating');
@@ -991,15 +990,42 @@ Lyft
         routeCache = {};
         await refetchJobsAroundCenter();
       } else {
-        // Subsequent fixes — just move the pin, update accuracy in button
         btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Located (±${accuracy}m)`;
       }
-    }, (err) => {
+    };
+
+    const _onErr = (err, isRetry) => {
+      // If high-accuracy failed for reasons other than permission denied, retry with low accuracy
+      if (!isRetry && err.code !== 1) {
+        console.warn('High-accuracy location failed, retrying with network location…', err.message);
+        _watchId = navigator.geolocation.watchPosition(_onPos, (err2) => _onErr(err2, true), {
+          enableHighAccuracy: false, maximumAge: 30000, timeout: 10000
+        });
+        return;
+      }
+
       btn.classList.remove('locating');
       btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity="0.35"/></svg> Share location`;
-      console.warn('Geolocation error:', err.message);
-      alert('Location access was blocked or unavailable. You can still browse jobs in the default DFW area, or enable location permissions and try again.');
-    }, { enableHighAccuracy: true, maximumAge: 0 });
+      console.warn('Geolocation error:', err.code, err.message);
+
+      const msgs = {
+        1: 'Location permission is blocked. On iPhone: Settings → Privacy & Security → Location Services → Safari → Allow While Using App.',
+        2: 'Could not determine your location. Try moving to a spot with better signal, or use ZIP code search.',
+        3: 'Location request timed out. Try again or use ZIP code search.'
+      };
+      const msg = msgs[err.code] || 'Location unavailable. You can still search by ZIP code.';
+
+      const zipStatus = document.getElementById('zip-status');
+      zipStatus.textContent = msg;
+      zipStatus.className = 'error';
+      document.getElementById('zip-entry').style.display = 'none';
+      document.getElementById('zip-toggle-link').style.display = 'block';
+      setTimeout(() => { zipStatus.textContent = ''; zipStatus.className = ''; }, 12000);
+    };
+
+    _watchId = navigator.geolocation.watchPosition(_onPos, (err) => _onErr(err, false), {
+      enableHighAccuracy: true, maximumAge: 5000, timeout: 12000
+    });
   }
 
   document.getElementById('locate-btn').addEventListener('click', requestLocation);
@@ -1071,7 +1097,9 @@ Lyft
     await refetchJobsAroundCenter();
   }
 
-  setTimeout(() => document.getElementById('location-banner').classList.remove('show'), 9000);
+  // Keep banner visible longer on mobile (small screens need more time to notice it)
+  const bannerDuration = window.innerWidth < 640 ? 20000 : 9000;
+  setTimeout(() => document.getElementById('location-banner').classList.remove('show'), bannerDuration);
 
   // ── Commute / Directions ─────────────────────────────────────────────────
   let routeCache = {};
