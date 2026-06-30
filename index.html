@@ -97,6 +97,18 @@
     /* Nav overlay drawer — keep dark since it overlays the map */
     body.light #ft-drawer { background: linear-gradient(to top, rgba(20,20,20,0.97) 0%, rgba(20,20,20,0.88) 78%, transparent 100%) !important; }
     body.light #zoom-hint { background: rgba(220,220,220,0.85) !important; border-color: rgba(0,0,0,0.1) !important; color: rgba(0,0,0,0.4) !important; }
+    /* Filter/toggle bar */
+    body.light #filter-wrap { background: #dcdcdc !important; border-color: rgba(0,110,60,0.12) !important; box-shadow: 0 2px 0 rgba(0,110,60,0.07), 0 4px 10px rgba(0,0,0,0.08) !important; }
+    body.light #view-toggle { background: rgba(0,0,0,0.06) !important; border-color: rgba(0,0,0,0.1) !important; }
+    body.light #view-toggle button { color: rgba(0,0,0,0.4) !important; }
+    body.light #view-toggle button.active { background: rgba(0,110,60,0.12) !important; color: #005a30 !important; box-shadow: 2px 2px 0 rgba(0,110,60,0.15) !important; }
+    body.light #reset-filter-btn { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.1) !important; color: rgba(0,0,0,0.4) !important; }
+    body.light #category-select { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.1) !important; color: #111 !important; }
+    body.light #filter-select-wrap::after { color: rgba(0,0,0,0.3) !important; }
+    /* Header text */
+    body.light .tagline { color: rgba(0,0,0,0.4) !important; }
+    body.light #zip-row button { color: rgba(0,0,0,0.4) !important; }
+    body.light #locate-btn { color: #111 !important; background: rgba(0,0,0,0.06) !important; border-color: rgba(0,0,0,0.12) !important; }
     #app { display: flex; height: 100dvh; width: 100vw; }
     /* ── Sidebar ── */
     #sidebar {
@@ -1339,6 +1351,12 @@ Lyft
 
     trackEvent('navigation_start', { mode, distance_mi: distMi });
 
+    // Hide job pins and any open popup during navigation
+    ['clusters-shadow','clusters','cluster-count','unclustered-shadow','unclustered-point'].forEach(id => {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+    });
+    if (activePopup) { activePopup.remove(); activePopup = null; }
+
     // ── Launch animation: badge flash + sidebar slide out ─────────────────
     const launchOverlay = document.getElementById('nav-launch-overlay');
     document.getElementById('nav-launch-mode').textContent  = cfg.label + ' Navigation';
@@ -1422,6 +1440,10 @@ Lyft
     ftActive = false;
     document.getElementById('flythrough-overlay').classList.remove('active');
     document.getElementById('sidebar').classList.remove('nav-hidden');
+    // Restore job pins
+    ['clusters-shadow','clusters','cluster-count','unclustered-shadow','unclustered-point'].forEach(id => {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
+    });
     const returnCenter = (userLocated && userMarker)
       ? userMarker.getLngLat().toArray()
       : CENTER;
