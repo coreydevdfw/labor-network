@@ -489,7 +489,7 @@
           <div class="mode-label">Bike</div>
           <div class="mode-time loading" id="time-cycling">—</div>
         </div>
-        <div class="commute-mode" id="mode-dart" onclick="openDartTripPlanner()" title="Nearest DART rail station">
+        <div class="commute-mode" id="mode-dart" onclick="selectMode('dart')" title="Nearest DART rail station">
           <div class="mode-icon">
             <svg width="22" height="22" viewBox="0 0 22 22">
               <rect x="4" y="6" width="16" height="10" rx="2" fill="rgba(183,148,246,0.25)"/>
@@ -834,8 +834,10 @@ Lyft
       const coords = [pos.coords.longitude, pos.coords.latitude];
       const accuracy = Math.round(pos.coords.accuracy);
 
-      // Update pin live — but not during flythrough (camera animates the route, not real movement)
-      if (!ftActive) placeUserMarker(coords);
+      // Always update user marker with real GPS
+      placeUserMarker(coords);
+      // Drive navigation overlay from real GPS when active
+      if (ftActive) _navUpdateFromGPS(coords);
 
       if (initialFix) {
         // First fix — fly to location, fetch jobs, update button
@@ -1075,9 +1077,9 @@ Lyft
   function selectMode(mode) {
     const now = Date.now();
     if (_lastModeTap.mode === mode && (now - _lastModeTap.time) < 350) {
-      // Double-tap — launch flythrough
+      // Double-tap — start GPS navigation
       _lastModeTap = { mode: null, time: 0 };
-      startFlythrough(mode);
+      startNavigation(mode);
       return;
     }
     _lastModeTap = { mode, time: now };
@@ -1085,11 +1087,14 @@ Lyft
     activeMode = mode;
     document.querySelectorAll('.commute-mode').forEach(el => el.classList.remove('active'));
     document.getElementById(`mode-${mode}`).classList.add('active');
-    if (currentJob) drawRoute(mode, [currentJob.lng, currentJob.lat]);
+    if (currentJob) {
+      const routeMode = mode === 'dart' ? 'walking' : mode;
+      drawRoute(routeMode, [currentJob.lng, currentJob.lat]);
+    }
   }
 
-  // ── Flythrough ────────────────────────────────────────────────────────────
-  let ftAnimId   = null;
+  // ── Navigation (GPS-driven turn-by-turn) ──────────────────────────────────
+  let ftAnimId   = null; // unused but kept to avoid reference errors
   let ftActive   = false;
   let ftCoords   = [];
   let ftCoordIdx = 0;
@@ -1099,9 +1104,10 @@ Lyft
   let ftSavedBearing = 0;
 
   const FT_MODE_CFG = {
-    driving: { color: '#63b3ed', label: 'Drive',  step: 1, delay: 85,  zoom: 16.5 },
-    walking: { color: '#ffb347', label: 'Walk',   step: 1, delay: 220, zoom: 17   },
-    cycling: { color: '#68d391', label: 'Bike',   step: 1, delay: 130, zoom: 16.5 },
+    driving: { color: '#63b3ed', label: 'Drive',  zoom: 16.5 },
+    walking: { color: '#ffb347', label: 'Walk',   zoom: 17   },
+    cycling: { color: '#68d391', label: 'Bike',   zoom: 16.5 },
+    dart:    { color: '#b794f6', label: 'DART',   zoom: 16   },
   };
 
   function _ftManeuverIcon(maneuver) {
@@ -1152,25 +1158,27 @@ Lyft
     if (activeStepEl) activeStepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  async function startFlythrough(mode) {
+  async function startNavigation(mode) {
     if (!currentJob) return;
     const cfg = FT_MODE_CFG[mode];
     if (!cfg) return;
+    if (!userLocated) { alert('Share your location first to start navigation.'); return; }
 
     const dest = [currentJob.lng, currentJob.lat];
 
-    // Force a fresh fetch so we're guaranteed to have steps
-    const routeKey = `${mode}|${dest[0]},${dest[1]}`;
+    // For DART, route walking legs; fall back to walking route for turn-by-turn
+    const routeMode = mode === 'dart' ? 'walking' : mode;
+    const routeKey = `${routeMode}|${dest[0]},${dest[1]}`;
     delete routeCache[routeKey];
-    const route = await fetchRoute(mode, dest);
+    const route = await fetchRoute(routeMode, dest);
     if (!route || !route.geometry?.coordinates?.length) return;
 
-    activeMode = mode; // ensure tick uses correct mode config
-    ftActive   = true;
-    ftCoords   = route.geometry.coordinates;
-    ftCoordIdx = 0;
-    ftStepIdx  = 0;
-    ftSteps    = route.legs?.[0]?.steps || [];
+    activeMode   = mode;
+    ftActive     = true;
+    ftCoords     = route.geometry.coordinates;
+    ftCoordIdx   = 0;
+    ftStepIdx    = 0;
+    ftSteps      = route.legs?.[0]?.steps || [];
     ftSavedPitch   = map.getPitch();
     ftSavedBearing = map.getBearing();
 
@@ -1206,59 +1214,73 @@ Lyft
     _ftUpdateTurnBanner(0);
 
     document.getElementById('flythrough-overlay').classList.add('active');
-    trackEvent('flythrough_start', { mode, distance_mi: distMi });
+    trackEvent('navigation_start', { mode, distance_mi: distMi });
 
-    // Pitch and zoom camera, then start animation
-    map.easeTo({ pitch: 72, zoom: cfg.zoom, duration: 900, easing: t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t });
-    setTimeout(_ftTick, 950);
+    // Lock camera to user's current GPS position at nav pitch/zoom
+    const userPos = userMarker ? userMarker.getLngLat().toArray() : CENTER;
+    const ahead   = ftCoords[Math.min(4, ftCoords.length - 1)];
+    const bearing = _ftBearing(userPos, ahead);
+    map.easeTo({ center: userPos, bearing, pitch: 72, zoom: cfg.zoom, duration: 900 });
   }
 
-  function _ftTick() {
-    if (!ftActive) return;
-    if (ftCoordIdx >= ftCoords.length - 1) { stopFlythrough(); return; }
+  // Called on every GPS update — drives the nav overlay when active
+  function _navUpdateFromGPS(coords) {
+    if (!ftActive || !ftCoords.length) return;
 
-    const cfg     = FT_MODE_CFG[activeMode] || FT_MODE_CFG.driving;
-    const current = ftCoords[ftCoordIdx];
+    const cfg = FT_MODE_CFG[activeMode] || FT_MODE_CFG.driving;
+
+    // Find closest point on route to current GPS position
+    let closestIdx = ftCoordIdx;
+    let minDist = Infinity;
+    for (let i = ftCoordIdx; i < ftCoords.length; i++) {
+      const d = haversineMiles(coords[1], coords[0], ftCoords[i][1], ftCoords[i][0]);
+      if (d < minDist) { minDist = d; closestIdx = i; }
+      if (d > 0.1) break; // stop scanning once we're far ahead
+    }
+    ftCoordIdx = closestIdx;
+
+    // Camera follows real GPS position, bearing toward next route point
     const ahead   = ftCoords[Math.min(ftCoordIdx + 4, ftCoords.length - 1)];
-    const bearing = _ftBearing(current, ahead);
-
-    // Smooth camera follow
-    map.easeTo({ center: current, bearing, pitch: 72, zoom: cfg.zoom, duration: cfg.delay * 0.9, easing: t => t });
-
-    // Do NOT move user marker during flythrough — camera animates the route,
-    // but the GPS dot stays at the user's actual physical location.
+    const bearing = _ftBearing(coords, ahead);
+    map.easeTo({ center: coords, bearing, pitch: 72, zoom: cfg.zoom, duration: 800 });
 
     // Progress
     const pct = Math.round((ftCoordIdx / (ftCoords.length - 1)) * 100);
     document.getElementById('ft-progress-fill').style.width = `${pct}%`;
     document.getElementById('ft-progress-pct').textContent  = `${pct}% complete`;
 
-    // Advance active step
-    const newStepIdx = Math.min(Math.floor(pct / 100 * ftSteps.length), ftSteps.length - 1);
+    // Advance turn banner based on proximity to step waypoints
+    let newStepIdx = ftStepIdx;
+    for (let i = ftStepIdx; i < ftSteps.length; i++) {
+      const wp = ftSteps[i].maneuver?.location;
+      if (!wp) continue;
+      const d = haversineMiles(coords[1], coords[0], wp[1], wp[0]);
+      if (d < 0.03) { newStepIdx = Math.min(i + 1, ftSteps.length - 1); break; }
+    }
     if (newStepIdx !== ftStepIdx) {
       ftStepIdx = newStepIdx;
       _ftUpdateTurnBanner(ftStepIdx);
     }
 
-    ftCoordIdx += cfg.step;
-    ftAnimId = setTimeout(_ftTick, cfg.delay);
+    // Arrived if within ~100ft of destination
+    if (currentJob) {
+      const distToDest = haversineMiles(coords[1], coords[0], currentJob.lat, currentJob.lng);
+      if (distToDest < 0.02) stopNavigation();
+    }
   }
 
-  function stopFlythrough() {
+  function stopNavigation() {
     ftActive = false;
-    if (ftAnimId) { clearTimeout(ftAnimId); ftAnimId = null; }
     document.getElementById('flythrough-overlay').classList.remove('active');
-    // Return camera to user's actual location, not wherever the route animation left it
     const returnCenter = (userLocated && userMarker)
       ? userMarker.getLngLat().toArray()
       : CENTER;
     map.easeTo({ center: returnCenter, pitch: 50, bearing: 0, zoom: 13, duration: 700 });
-    trackEvent('flythrough_stop', { pct_complete: ftCoordIdx && ftCoords.length ? Math.round(ftCoordIdx / ftCoords.length * 100) : 0 });
+    trackEvent('navigation_stop', { pct_complete: ftCoordIdx && ftCoords.length ? Math.round(ftCoordIdx / ftCoords.length * 100) : 0 });
   }
 
-  function openDartTripPlanner() {
-    window.open('https://www.dart.org/', '_blank', 'noopener');
-  }
+  // Keep stopFlythrough as alias so the overlay exit button still works
+  function stopFlythrough() { stopNavigation(); }
 
   function closeCommute() {
     document.getElementById('commute-panel').classList.remove('visible');
