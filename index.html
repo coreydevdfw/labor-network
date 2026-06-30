@@ -316,6 +316,60 @@
       pointer-events: none;
     }
     #flythrough-overlay.active { display: block; }
+
+    /* ── Navigation launch transition ── */
+    #nav-launch-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none; opacity: 0;
+    }
+    #nav-launch-overlay.active { pointer-events: all; }
+    @keyframes navFlash {
+      0%   { opacity: 0; transform: scale(0.85); }
+      18%  { opacity: 1; transform: scale(1); }
+      72%  { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.06); }
+    }
+    @keyframes navPulseRing {
+      0%   { transform: scale(0.6); opacity: 0.9; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+    #nav-launch-badge {
+      position: relative;
+      background: #0f0f0f;
+      border: 2px solid #00ff88;
+      box-shadow: 0 0 0 6px rgba(0,255,136,0.08), 4px 6px 0 rgba(0,255,136,0.28);
+      border-radius: 14px;
+      padding: 20px 36px;
+      text-align: center;
+      animation: navFlash 1.5s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    #nav-launch-badge .nav-mode-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #00ff88; margin-bottom: 6px;
+    }
+    #nav-launch-badge .nav-dest-label {
+      font-size: 17px; font-weight: 800; color: #fff; letter-spacing: 0.01em;
+    }
+    #nav-launch-badge .nav-dest-co {
+      font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 3px;
+    }
+    .nav-pulse-ring {
+      position: absolute; inset: -24px;
+      border: 2px solid rgba(0,255,136,0.5);
+      border-radius: 22px;
+      animation: navPulseRing 0.9s ease-out forwards;
+    }
+    .nav-pulse-ring:nth-child(2) { animation-delay: 0.22s; }
+    /* Sidebar slides out during navigation */
+    #sidebar.nav-hidden {
+      transform: translateX(-100%);
+      transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+      pointer-events: none;
+    }
+    #sidebar {
+      transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+    }
     #ft-top {
       position: absolute; top: 0; left: 0; right: 0;
       background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%);
@@ -425,9 +479,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 1114 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
           Pins
         </button>
-        <button id="toggle-heatmap" title="Hot zones — where the most openings are clustered">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8 6 6 9 6 13a6 6 0 1012 0c0-4-2-7-6-11z"/></svg>
-          Hot zones
+        <button id="toggle-theme" title="Toggle light/dark mode">
+          <svg id="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg id="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <span id="theme-label">Light</span>
         </button>
       </div>
     </div>
@@ -558,7 +613,6 @@ Lyft
     <div id="map"></div>
     <div id="vignette"></div>
     <div id="zoom-hint">Zoom in to explore your neighborhood →</div>
-    <div id="heatmap-caption"><strong>Hot zones</strong> show where the most current openings are clustered right now — a good signal for where to focus your search, not a historical hiring trend.</div>
     <div id="location-banner">
       📍 Share your location for a tighter radius
       <button onclick="requestLocation()">Allow</button>
@@ -601,6 +655,17 @@ Lyft
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Nav launch transition overlay -->
+<div id="nav-launch-overlay">
+  <div id="nav-launch-badge">
+    <div class="nav-pulse-ring"></div>
+    <div class="nav-pulse-ring"></div>
+    <div class="nav-mode-label" id="nav-launch-mode">—</div>
+    <div class="nav-dest-label" id="nav-launch-title">—</div>
+    <div class="nav-dest-co" id="nav-launch-co">—</div>
   </div>
 </div>
 
@@ -1213,8 +1278,33 @@ Lyft
 
     _ftUpdateTurnBanner(0);
 
-    document.getElementById('flythrough-overlay').classList.add('active');
     trackEvent('navigation_start', { mode, distance_mi: distMi });
+
+    // ── Launch animation: badge flash + sidebar slide out ─────────────────
+    const launchOverlay = document.getElementById('nav-launch-overlay');
+    document.getElementById('nav-launch-mode').textContent  = cfg.label + ' Navigation';
+    document.getElementById('nav-launch-title').textContent = currentJob.title;
+    document.getElementById('nav-launch-co').textContent    = currentJob.company;
+
+    // Reset badge animation by cloning it
+    const oldBadge = document.getElementById('nav-launch-badge');
+    const newBadge = oldBadge.cloneNode(true);
+    oldBadge.replaceWith(newBadge);
+
+    launchOverlay.classList.add('active');
+    launchOverlay.style.opacity = '1';
+
+    // Slide sidebar out after a brief beat
+    setTimeout(() => {
+      document.getElementById('sidebar').classList.add('nav-hidden');
+    }, 200);
+
+    // Show nav overlay and clear launch screen after animation completes
+    setTimeout(() => {
+      document.getElementById('flythrough-overlay').classList.add('active');
+      launchOverlay.style.opacity = '0';
+      setTimeout(() => launchOverlay.classList.remove('active'), 300);
+    }, 1400);
 
     // Lock camera to user's current GPS position at nav pitch/zoom
     const userPos = userMarker ? userMarker.getLngLat().toArray() : CENTER;
@@ -1272,6 +1362,7 @@ Lyft
   function stopNavigation() {
     ftActive = false;
     document.getElementById('flythrough-overlay').classList.remove('active');
+    document.getElementById('sidebar').classList.remove('nav-hidden');
     const returnCenter = (userLocated && userMarker)
       ? userMarker.getLngLat().toArray()
       : CENTER;
@@ -1332,28 +1423,77 @@ Lyft
   });
   document.getElementById('reset-filter-btn').disabled = true;
 
-  // ── View toggle: pins vs heatmap ─────────────────────────────────────────
-  let viewMode = 'pins';
+  // ── View toggle: pins only ───────────────────────────────────────────────
   const pinsBtn = document.getElementById('toggle-pins');
-  const heatBtn = document.getElementById('toggle-heatmap');
+  pinsBtn.classList.add('active');
 
-  function setViewMode(mode) {
-    viewMode = mode;
-    pinsBtn.classList.toggle('active', mode === 'pins');
-    heatBtn.classList.toggle('active', mode === 'heatmap');
-    document.getElementById('heatmap-caption').classList.toggle('show', mode === 'heatmap');
-    if (!map.getLayer('jobs-heat')) return;
-    const pinVis  = mode === 'pins'    ? 'visible' : 'none';
-    const heatVis = mode === 'heatmap' ? 'visible' : 'none';
-    map.setLayoutProperty('clusters-shadow',   'visibility', pinVis);
-    map.setLayoutProperty('clusters',          'visibility', pinVis);
-    map.setLayoutProperty('cluster-count',     'visibility', pinVis);
-    map.setLayoutProperty('unclustered-shadow','visibility', pinVis);
-    map.setLayoutProperty('unclustered-point', 'visibility', pinVis);
-    map.setLayoutProperty('jobs-heat',         'visibility', heatVis);
+  // ── Light / Dark theme toggle ─────────────────────────────────────────────
+  let isLight = false;
+
+  const THEME = {
+    dark: {
+      mapStyle:   'mapbox://styles/mapbox/dark-v11',
+      accent:     '#00ff88',
+      sidebarBg:  '#0f0f0f',
+      headerBg:   '#111',
+      cardBg:     '#161616',
+      text:       '#fff',
+      subtext:    'rgba(255,255,255,0.45)',
+      border:     'rgba(255,255,255,0.07)',
+      accentBorder:'rgba(0,255,136,0.12)',
+    },
+    light: {
+      mapStyle:   'mapbox://styles/mapbox/light-v11',
+      accent:     '#00c96a',
+      sidebarBg:  '#f5f5f5',
+      headerBg:   '#ffffff',
+      cardBg:     '#eeeeee',
+      text:       '#111',
+      subtext:    'rgba(0,0,0,0.45)',
+      border:     'rgba(0,0,0,0.09)',
+      accentBorder:'rgba(0,201,106,0.18)',
+    }
+  };
+
+  function applyTheme(t) {
+    const r = document.documentElement.style;
+    r.setProperty('--accent',        t.accent);
+    r.setProperty('--sidebar-bg',    t.sidebarBg);
+    r.setProperty('--header-bg',     t.headerBg);
+    r.setProperty('--card-bg',       t.cardBg);
+    r.setProperty('--text',          t.text);
+    r.setProperty('--subtext',       t.subtext);
+    r.setProperty('--border',        t.border);
+    r.setProperty('--accent-border', t.accentBorder);
+    document.getElementById('sidebar').style.background   = t.sidebarBg;
+    document.getElementById('sidebar').style.borderColor  = t.border;
+    document.getElementById('sidebar-header-wrap').style.background   = t.headerBg;
+    document.getElementById('sidebar-header-wrap').style.borderColor  = t.accentBorder;
   }
-  pinsBtn.addEventListener('click', () => setViewMode('pins'));
-  heatBtn.addEventListener('click', () => setViewMode('heatmap'));
+
+  function toggleTheme() {
+    isLight = !isLight;
+    const t = isLight ? THEME.light : THEME.dark;
+
+    // Swap map style — re-add layers once style loads
+    map.setStyle(t.mapStyle);
+    map.once('style.load', () => {
+      setupMapLayers();
+      if (allJobs.length) updateMapLayer();
+      if (userMarker) { const pos = userMarker.getLngLat().toArray(); userMarker.remove(); userMarker = null; placeUserMarker(pos); }
+    });
+
+    applyTheme(t);
+
+    // Update button
+    const themeBtn = document.getElementById('toggle-theme');
+    themeBtn.classList.toggle('active', isLight);
+    document.getElementById('theme-icon-dark').style.display  = isLight ? 'none'  : '';
+    document.getElementById('theme-icon-light').style.display = isLight ? ''      : 'none';
+    document.getElementById('theme-label').textContent        = isLight ? 'Dark'  : 'Light';
+  }
+
+  document.getElementById('toggle-theme').addEventListener('click', toggleTheme);
 
   // ── Sidebar ───────────────────────────────────────────────────────────────
   function filteredJobs() {
@@ -1677,37 +1817,41 @@ Lyft
     }
   }
 
-  // ── Map load ─────────────────────────────────────────────────────────────
-  map.on('load', async () => {
-    // Darken/desaturate default navy palette
-    [
-      ['background',    'background-color', '#0d0f14'],
-      ['land',          'background-color', '#0d0f14'],
-      ['water',         'fill-color',       '#0a1018'],
-      ['waterway',      'line-color',       '#0a1018'],
-      ['landuse',       'fill-color',       '#0d0f14'],
-      ['national-park', 'fill-color',       '#0d0f14'],
-      ['landcover',     'fill-color',       '#0d0f14'],
-    ].forEach(([layerId, prop, value]) => {
-      try { if (map.getLayer(layerId)) map.setPaintProperty(layerId, prop, value); } catch(e) {}
-    });
+  // ── Map layer setup (called on initial load + after style swap) ──────────
+  function setupMapLayers() {
+    const accent = isLight ? '#00c96a' : '#00ff88';
+
+    // Dark mode: tint base layers; light mode: leave Mapbox defaults
+    if (!isLight) {
+      [
+        ['background',    'background-color', '#0d0f14'],
+        ['land',          'background-color', '#0d0f14'],
+        ['water',         'fill-color',       '#0a1018'],
+        ['waterway',      'line-color',       '#0a1018'],
+        ['landuse',       'fill-color',       '#0d0f14'],
+        ['national-park', 'fill-color',       '#0d0f14'],
+        ['landcover',     'fill-color',       '#0d0f14'],
+      ].forEach(([layerId, prop, value]) => {
+        try { if (map.getLayer(layerId)) map.setPaintProperty(layerId, prop, value); } catch(e) {}
+      });
+    }
 
     // 3D buildings
     map.addLayer({
       id:'3d-buildings', source:'composite', 'source-layer':'building',
       filter:['==','extrude','true'], type:'fill-extrusion', minzoom:14,
       paint:{
-        'fill-extrusion-color':'#1a1a2e',
+        'fill-extrusion-color': isLight ? '#d0d0d0' : '#1a1a2e',
         'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,14.5,['get','height']],
         'fill-extrusion-base':['interpolate',['linear'],['zoom'],14,0,14.5,['get','min_height']],
-        'fill-extrusion-opacity':0.75
+        'fill-extrusion-opacity': isLight ? 0.5 : 0.75
       }
     });
 
     // Radius circle
     map.addSource('radius-circle', { type:'geojson', data:makeCircle(CENTER, RADIUS) });
-    map.addLayer({ id:'radius-fill',    type:'fill',   source:'radius-circle', paint:{'fill-color':'#00ff88','fill-opacity':0.03} });
-    map.addLayer({ id:'radius-outline', type:'line',   source:'radius-circle', paint:{'line-color':'#00ff88','line-width':1.5,'line-opacity':0.3,'line-dasharray':[4,3]} });
+    map.addLayer({ id:'radius-fill',    type:'fill', source:'radius-circle', paint:{'fill-color':accent,'fill-opacity':0.03} });
+    map.addLayer({ id:'radius-outline', type:'line', source:'radius-circle', paint:{'line-color':accent,'line-width':1.5,'line-opacity':0.3,'line-dasharray':[4,3]} });
 
     // Jobs source + layers
     map.addSource('jobs', {
@@ -1715,37 +1859,20 @@ Lyft
       cluster:true, clusterMaxZoom:13, clusterRadius:48
     });
 
-    // Heatmap
-    map.addLayer({
-      id:'jobs-heat', type:'heatmap', source:'jobs', maxzoom:16,
-      layout:{ visibility:'none' },
-      paint:{
-        'heatmap-weight':1,
-        'heatmap-intensity':['interpolate',['linear'],['zoom'],8,1,14,3],
-        'heatmap-color':[
-          'interpolate',['linear'],['heatmap-density'],
-          0,'rgba(0,0,0,0)', 0.2,'rgba(0,80,60,0.5)', 0.4,'rgba(0,180,110,0.65)',
-          0.6,'rgba(0,255,136,0.75)', 0.8,'rgba(255,193,7,0.8)', 1,'rgba(255,80,80,0.9)'
-        ],
-        'heatmap-radius':['interpolate',['linear'],['zoom'],8,16,14,36],
-        'heatmap-opacity':0.85
-      }
-    }, 'clusters');
-
-    // ── Cluster shadow layer (offset badge — drawn first so it sits behind) ──
+    // ── Cluster shadow (offset badge) ──
     map.addLayer({ id:'clusters-shadow', type:'circle', source:'jobs', filter:['has','point_count'],
       paint:{
-        'circle-color':['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],
+        'circle-color':['step',['get','point_count'], isLight?'#00a055':'#00cc6e', 5, accent, 15,'#66ffbb'],
         'circle-radius':['step',['get','point_count'],20,5,26,15,33],
-        'circle-opacity':0.28,
-        'circle-translate':[4, 4]
+        'circle-opacity':0.28, 'circle-translate':[4,4]
       }
     });
     map.addLayer({ id:'clusters', type:'circle', source:'jobs', filter:['has','point_count'],
       paint:{
-        'circle-color':['step',['get','point_count'],'#00cc6e',5,'#00ff88',15,'#66ffbb'],
+        'circle-color':['step',['get','point_count'], isLight?'#00a055':'#00cc6e', 5, accent, 15,'#66ffbb'],
         'circle-radius':['step',['get','point_count'],20,5,26,15,33],
-        'circle-opacity':0.92, 'circle-stroke-width':1.5, 'circle-stroke-color':'rgba(255,255,255,0.3)'
+        'circle-opacity':0.92, 'circle-stroke-width':1.5,
+        'circle-stroke-color': isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)'
       }
     });
     map.addLayer({ id:'cluster-count', type:'symbol', source:'jobs', filter:['has','point_count'],
@@ -1754,27 +1881,31 @@ Lyft
         'text-font':['DIN Pro Bold','Arial Unicode MS Bold'],
         'text-size':12, 'text-allow-overlap':true
       },
-      paint:{'text-color':'#0a0a0a'}
+      paint:{'text-color': isLight ? '#fff' : '#0a0a0a'}
     });
-    // ── Unclustered job pin: shadow layer (offset +4px) drawn first ──
+    // ── Unclustered shadow ──
     map.addLayer({ id:'unclustered-shadow', type:'circle', source:'jobs', filter:['!',['has','point_count']],
       paint:{
-        'circle-color':['coalesce',['get','color'],'#00ff88'],
+        'circle-color':['coalesce',['get','color'],accent],
         'circle-radius':['interpolate',['linear'],['zoom'],13,8,16,12],
-        'circle-opacity':0.28,
-        'circle-translate':[4, 4]
+        'circle-opacity':0.28, 'circle-translate':[4,4]
       }
     });
-    // ── Unclustered job pin: main circle (category color, visible) ──
+    // ── Unclustered main pin ──
     map.addLayer({ id:'unclustered-point', type:'circle', source:'jobs', filter:['!',['has','point_count']],
       paint:{
-        'circle-color':['coalesce',['get','color'],'#00ff88'],
+        'circle-color':['coalesce',['get','color'],accent],
         'circle-radius':['interpolate',['linear'],['zoom'],13,8,16,12],
         'circle-stroke-width':1.5,
-        'circle-stroke-color':'rgba(255,255,255,0.55)',
+        'circle-stroke-color': isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.55)',
         'circle-opacity':0.92
       }
     });
+  }
+
+  // ── Map load ─────────────────────────────────────────────────────────────
+  map.on('load', async () => {
+    setupMapLayers();
 
     // Cluster click → expand
     map.on('click', 'clusters', e => {
