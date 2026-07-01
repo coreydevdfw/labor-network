@@ -935,7 +935,7 @@ Lyft
   const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/dark-v11',
-    center: CENTER, zoom: 10, minZoom: 8, maxZoom: 20, pitch: 0,
+    center: CENTER, zoom: 10, minZoom: 8, maxZoom: 19, pitch: 0,
     // Mapbox GL's default maxPitch is 60 — every nav-mode easeTo() below asks
     // for pitch:72 (a much steeper, closer-to-street-level camera) but was
     // silently getting clamped to 60 the whole time. Raising the cap here is
@@ -1534,10 +1534,10 @@ Lyft
   let ftSavedBearing = 0;
 
   const FT_MODE_CFG = {
-    driving: { color: '#63b3ed', label: 'Drive',  zoom: 19.5 },
-    walking: { color: '#ffb347', label: 'Walk',   zoom: 19.5 },
-    cycling: { color: '#68d391', label: 'Bike',   zoom: 19.5 },
-    dart:    { color: '#b794f6', label: 'DART',   zoom: 19.5 },
+    driving: { color: '#63b3ed', label: 'Drive',  zoom: 16.5 },
+    walking: { color: '#ffb347', label: 'Walk',   zoom: 18.5 },
+    cycling: { color: '#68d391', label: 'Bike',   zoom: 16.5 },
+    dart:    { color: '#b794f6', label: 'DART',   zoom: 16   },
   };
 
   // Named thresholds that used to be scattered as unlabeled magic numbers
