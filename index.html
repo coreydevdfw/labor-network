@@ -439,14 +439,27 @@
       animation: navPulseRing 0.9s ease-out forwards;
     }
     .nav-pulse-ring:nth-child(2) { animation-delay: 0.22s; }
-    /* Sidebar slides out during navigation */
+    /* Sidebar slides out during navigation.
+       Must collapse width/min-width (not just transform) — #app is a flex
+       row and #sidebar has a fixed width:320px/min-width:320px. A transform
+       alone moves the sidebar off-screen but still reserves its 320px in
+       the flex layout, so #map-wrap (flex:1) never actually grows to fill
+       that space. That leaves a permanent blank/black 320px column on the
+       left during navigation, with the map + nav overlay (both absolutely
+       positioned inside #map-wrap) confined to the remaining width instead
+       of spanning the full screen. */
     #sidebar.nav-hidden {
       transform: translateX(-100%);
-      transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+      width: 0; min-width: 0;
+      transition: transform 0.55s cubic-bezier(0.4,0,0.2,1),
+                  width 0.55s cubic-bezier(0.4,0,0.2,1),
+                  min-width 0.55s cubic-bezier(0.4,0,0.2,1);
       pointer-events: none;
     }
     #sidebar {
-      transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+      transition: transform 0.45s cubic-bezier(0.4,0,0.2,1),
+                  width 0.45s cubic-bezier(0.4,0,0.2,1),
+                  min-width 0.45s cubic-bezier(0.4,0,0.2,1);
     }
     #ft-top {
       position: absolute; top: 0; left: 0; right: 0;
@@ -512,7 +525,15 @@
 
     @media (max-width:640px) {
       #app { flex-direction:column; }
-      #sidebar { width:100%; min-width:unset; height:auto; max-height:50dvh; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); }
+      #sidebar { width:100%; min-width:unset; height:auto; max-height:50dvh; border-right:none; border-bottom:1px solid rgba(255,255,255,0.07);
+        transition: transform 0.45s cubic-bezier(0.4,0,0.2,1), max-height 0.45s cubic-bezier(0.4,0,0.2,1); }
+      /* In the column layout it's HEIGHT, not width, that #sidebar reserves —
+         same bug as desktop, different axis. Collapse max-height too so
+         #map-wrap (flex:1) actually grows to fill the freed vertical space
+         instead of leaving a blank reserved band where the sidebar used to
+         sit stacked above the map. */
+      #sidebar.nav-hidden { max-height: 0; width:100%; min-width:unset;
+        transition: transform 0.55s cubic-bezier(0.4,0,0.2,1), max-height 0.55s cubic-bezier(0.4,0,0.2,1); }
       #map-wrap { flex:1; min-height:0; height:50dvh; }
     }
   </style>
@@ -863,6 +884,23 @@ Lyft
   window.addEventListener('orientationchange', scheduleMapResize);
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', scheduleMapResize);
+  }
+
+  // Sidebar show/hide (nav mode) animates #sidebar's width via CSS transition,
+  // which grows/shrinks #map-wrap (flex:1) but does NOT fire a window resize
+  // event — so the Mapbox canvas needs an explicit nudge once that transition
+  // finishes, or it keeps rendering at the old, narrower size.
+  function resizeMapAfterSidebarTransition() {
+    const sidebar = document.getElementById('sidebar');
+    let done = false;
+    const finish = () => { if (done) return; done = true; map.resize(); };
+    sidebar.addEventListener('transitionend', e => {
+      // 'width' collapses on desktop (row layout); 'max-height' collapses
+      // on mobile (column layout, @media max-width:640px) — either signals
+      // the sidebar's reserved space has actually finished changing.
+      if (e.target === sidebar && (e.propertyName === 'width' || e.propertyName === 'max-height')) finish();
+    }, { once: true });
+    setTimeout(finish, 650); // fallback in case transitionend doesn't fire
   }
 
   // ── Circle ───────────────────────────────────────────────────────────────
@@ -1448,6 +1486,7 @@ Lyft
     // Slide sidebar out after badge has settled
     setTimeout(() => {
       document.getElementById('sidebar').classList.add('nav-hidden');
+      resizeMapAfterSidebarTransition();
     }, 800);
 
     // Show nav overlay and clear launch screen after animation completes
@@ -1514,6 +1553,7 @@ Lyft
     ftActive = false;
     document.getElementById('flythrough-overlay').classList.remove('active');
     document.getElementById('sidebar').classList.remove('nav-hidden');
+    resizeMapAfterSidebarTransition();
     // Restore job pins
     ['clusters-shadow','clusters','cluster-count','unclustered-shadow','unclustered-point'].forEach(id => {
       if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
