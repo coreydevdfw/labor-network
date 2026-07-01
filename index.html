@@ -92,7 +92,7 @@
     body.light .card-cat { background: rgba(0,0,0,0.07) !important; color: #222 !important; }
     body.light .card-source { color: rgba(0,0,0,0.35) !important; background: rgba(0,0,0,0.06) !important; }
     body.light .card-stale { color: rgba(140,90,0,0.8) !important; }
-    body.light #empty-state { color: rgba(0,0,0,0.3) !important; }
+    body.light #empty-state, body.light #no-jobs-state { color: rgba(0,0,0,0.3) !important; }
     body.light #loading-state { color: rgba(0,0,0,0.3) !important; }
     /* Nav overlay drawer — keep dark since it overlays the map */
     body.light #ft-drawer { background: linear-gradient(to top, rgba(20,20,20,0.97) 0%, rgba(20,20,20,0.88) 78%, transparent 100%) !important; }
@@ -272,7 +272,7 @@
     #double-tap-hint.hidden { opacity: 0; pointer-events: none; }
     body.light #double-tap-hint { color: rgba(0,110,60,0.5); }
     #commute-close { position: absolute; right: 12px; top: 12px; background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 16px; padding: 2px; }
-    /* ── Traffic gauge + link tracker row ── */
+    /* ── Traffic gauge + posting-age row ── */
     #commute-bottom-row {
       display: flex; flex-direction: column; gap: 0;
     }
@@ -302,7 +302,7 @@
     #gauge-needle-g {
       transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    /* ── Link tracker ── */
+    /* ── Posting age ── */
     @keyframes tilePulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
     /* ── List section ── */
     #list-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -323,6 +323,9 @@
     }
     .job-card:hover { background: rgba(255,255,255,0.06); transform: translateX(2px); }
     .job-card.active { background: rgba(255,255,255,0.08); }
+    .job-card:focus-visible, .commute-mode:focus-visible, button:focus-visible {
+      outline: 2px solid #00ff88; outline-offset: 2px;
+    }
     .card-title { font-size: 11px; font-weight: 800; color: #fff; margin-bottom: 2px; line-height: 1.25; letter-spacing: 0.01em; }
     .card-company { font-size: 9px; font-weight: 700; color: #00ff88; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.65; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
     .card-footer { display: flex; align-items: center; justify-content: space-between; }
@@ -347,7 +350,7 @@
       background: rgba(255,255,255,0.06); border-radius: 4px;
       padding: 1px 5px; letter-spacing: 0.03em;
     }
-    #empty-state { text-align:center; padding:32px 20px; color:rgba(255,255,255,0.25); font-size:12px; line-height:1.6; display:none; }
+    #empty-state, #no-jobs-state { text-align:center; padding:32px 20px; color:rgba(255,255,255,0.25); font-size:12px; line-height:1.6; display:none; }
     #loading-state { text-align:center; padding:32px 20px; color:rgba(255,255,255,0.3); font-size:12px; display:none; }
     .pulse { animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%,100%{opacity:0.3}50%{opacity:0.8} }
@@ -365,8 +368,13 @@
     #location-banner { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); z-index:8; background:rgba(15,15,15,0.95); border:1px solid rgba(0,255,136,0.3); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(255,255,255,0.7); box-shadow:0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:opacity 0.4s; max-width: calc(100vw - 24px); width: max-content; }
     #location-banner.show { opacity:1; pointer-events:auto; }
     #location-banner button { font-size:11px; font-weight:700; color:#0a0a0a; background:#00ff88; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-family:inherit; flex-shrink: 0; }
+    /* Shown when a job source (currently just Jooble) fails to load, so
+       "fewer results than expected" doesn't silently read as a bug. */
+    #source-warning-banner { position:absolute; bottom:104px; left:50%; transform:translateX(-50%); z-index:8; background:rgba(15,15,15,0.95); border:1px solid rgba(255,193,7,0.35); border-radius:10px; padding:9px 14px; display:flex; align-items:center; gap:8px; font-size:12px; color:rgba(255,255,255,0.75); box-shadow:0 4px 20px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:opacity 0.4s; max-width: calc(100vw - 24px); width: max-content; }
+    #source-warning-banner.show { opacity:1; }
     @media (max-width: 640px) {
       #location-banner { bottom: 12px; left: 12px; right: 12px; transform: none; width: auto; max-width: none; font-size: 11px; }
+      #source-warning-banner { bottom: 60px; left: 12px; right: 12px; transform: none; width: auto; max-width: none; font-size: 11px; }
     }
     /* ── Mapbox attribution ── */
     .mapboxgl-ctrl-logo { opacity: 0.35; filter: grayscale(1) brightness(1.8); }
@@ -445,6 +453,32 @@
       animation: navPulseRing 0.9s ease-out forwards;
     }
     .nav-pulse-ring:nth-child(2) { animation-delay: 0.22s; }
+    /* ── Custom alert/confirm dialog ── */
+    #app-dialog-overlay {
+      position: fixed; inset: 0; z-index: 10000;
+      background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    #app-dialog-overlay.show { display: flex; }
+    #app-dialog-box {
+      position: relative;
+      background: #0f0f0f; border: 2px solid #00ff88;
+      box-shadow: 0 0 0 6px rgba(0,255,136,0.08), 4px 6px 0 rgba(0,255,136,0.28);
+      border-radius: 14px; padding: 22px 24px; max-width: 340px; width: 100%;
+    }
+    body.light #app-dialog-box { background: #fff; border-color: #00a055; box-shadow: 0 0 0 6px rgba(0,160,85,0.08), 4px 6px 0 rgba(0,160,85,0.22); }
+    #app-dialog-message { font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.9); white-space: pre-line; }
+    body.light #app-dialog-message { color: rgba(0,0,0,0.85); }
+    #app-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    #app-dialog-actions button {
+      font-family: inherit; font-size: 12px; font-weight: 700; border-radius: 8px;
+      padding: 8px 14px; cursor: pointer; border: 1px solid transparent;
+    }
+    #app-dialog-cancel { background: transparent; border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); }
+    body.light #app-dialog-cancel { border-color: rgba(0,0,0,0.2); color: rgba(0,0,0,0.6); }
+    #app-dialog-confirm { background: #00ff88; color: #0a0a0a; }
+    body.light #app-dialog-confirm { background: #00a055; color: #fff; }
     /* Sidebar slides out during navigation.
        Must collapse width/min-width (not just transform) — #app is a flex
        row and #sidebar has a fixed width:320px/min-width:320px. A transform
@@ -554,7 +588,7 @@
           <div class="tagline">Hyperlocal jobs · DFW</div>
         </div>
         <button id="locate-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
             <circle cx="12" cy="12" r="8" stroke-opacity="0.35"/>
           </svg>
@@ -564,20 +598,20 @@
       <div id="zip-row">
         <button id="zip-toggle-link">or search by ZIP code</button>
         <div id="zip-entry" style="display:none">
-          <input id="zip-input" type="text" inputmode="numeric" maxlength="5" placeholder="75201" />
+          <input id="zip-input" type="text" inputmode="numeric" maxlength="5" placeholder="75201" aria-label="ZIP code" />
           <button id="zip-go-btn">Go</button>
-          <button id="zip-cancel-btn" title="Cancel">✕</button>
+          <button id="zip-cancel-btn" title="Cancel" aria-label="Cancel ZIP search">✕</button>
         </div>
         <div id="zip-status"></div>
       </div>
     </div>
     <div id="filter-wrap">
       <div id="filter-select-wrap">
-        <span id="cat-dot"></span>
-        <select id="category-select"></select>
+        <span id="cat-dot" aria-hidden="true"></span>
+        <select id="category-select" aria-label="Job category filter"></select>
       </div>
-      <button id="reset-filter-btn" title="Reset filters">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 4v5h5"/></svg>
+      <button id="reset-filter-btn" title="Reset filters" aria-label="Reset filters">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 4v5h5"/></svg>
       </button>
       <div id="view-toggle">
         <button id="toggle-pins" class="active" title="Pin view">
@@ -594,14 +628,14 @@
 
     <!-- Commute panel — shown when a job is focused -->
     <div id="commute-panel" style="position:relative">
-      <button id="commute-close" onclick="closeCommute()">✕</button>
+      <button id="commute-close" onclick="closeCommute()" aria-label="Close commute panel">✕</button>
       <div>
         <div id="commute-job-title">—</div>
         <div id="commute-job-company"></div>
       </div>
       <div id="double-tap-hint">Double-tap a mode to navigate</div>
       <div id="commute-modes">
-        <div class="commute-mode active" id="mode-driving" onclick="selectMode('driving')">
+        <div class="commute-mode active" id="mode-driving" onclick="selectMode('driving')" role="button" tabindex="0" aria-label="Drive commute mode. Double-tap or press twice quickly to start navigation.">
           <div class="mode-icon">
             <svg width="22" height="22" viewBox="0 0 22 22">
               <rect x="4" y="9" width="15" height="8" rx="2.5" fill="rgba(99,179,237,0.25)"/>
@@ -616,7 +650,7 @@
           <div class="mode-label">Drive</div>
           <div class="mode-time loading" id="time-driving">—</div>
         </div>
-        <div class="commute-mode" id="mode-walking" onclick="selectMode('walking')">
+        <div class="commute-mode" id="mode-walking" onclick="selectMode('walking')" role="button" tabindex="0" aria-label="Walk commute mode. Double-tap or press twice quickly to start navigation.">
           <div class="mode-icon">
             <svg width="22" height="22" viewBox="0 0 22 22">
               <circle cx="12" cy="5" r="2.2" fill="rgba(255,179,71,0.25)"/>
@@ -634,7 +668,7 @@
           <div class="mode-label">Walk</div>
           <div class="mode-time loading" id="time-walking">—</div>
         </div>
-        <div class="commute-mode" id="mode-cycling" onclick="selectMode('cycling')">
+        <div class="commute-mode" id="mode-cycling" onclick="selectMode('cycling')" role="button" tabindex="0" aria-label="Bike commute mode. Double-tap or press twice quickly to start navigation.">
           <div class="mode-icon">
             <svg width="22" height="22" viewBox="0 0 22 22">
               <circle cx="6" cy="16.5" r="2.8" fill="rgba(104,211,145,0.25)"/>
@@ -650,7 +684,7 @@
           <div class="mode-label">Bike</div>
           <div class="mode-time loading" id="time-cycling">—</div>
         </div>
-        <div class="commute-mode" id="mode-dart" onclick="selectMode('dart')" title="Nearest DART rail station">
+        <div class="commute-mode" id="mode-dart" onclick="selectMode('dart')" title="Nearest DART rail station" role="button" tabindex="0" aria-label="DART transit commute mode, nearest rail station. Double-tap or press twice quickly to start navigation.">
           <div class="mode-icon">
             <svg width="22" height="22" viewBox="0 0 22 22">
               <rect x="4" y="6" width="16" height="10" rx="2" fill="rgba(183,148,246,0.25)"/>
@@ -706,6 +740,7 @@ Lyft
       <div id="job-list">
         <div id="loading-state" class="pulse">Loading…</div>
         <div id="empty-state">No jobs in this category nearby.<br>Try another filter.</div>
+        <div id="no-jobs-state">No jobs found near this location.<br>Try sharing your location or searching a different ZIP code.</div>
       </div>
     </div>
     <div id="pre-select">
@@ -723,6 +758,7 @@ Lyft
       📍 Share your location for a tighter radius
       <button onclick="requestLocation()">Allow</button>
     </div>
+    <div id="source-warning-banner" role="status"></div>
 
     <!-- ── Flythrough overlay — shown on double-tap of any commute mode tile ── -->
     <div id="flythrough-overlay">
@@ -772,6 +808,18 @@ Lyft
     <div class="nav-mode-label" id="nav-launch-mode">—</div>
     <div class="nav-dest-label" id="nav-launch-title">—</div>
     <div class="nav-dest-co" id="nav-launch-co">—</div>
+  </div>
+</div>
+
+<!-- Custom alert/confirm dialog — replaces native alert()/confirm() so
+     interruptions match the app's own look instead of a jarring browser popup. -->
+<div id="app-dialog-overlay" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-message">
+  <div id="app-dialog-box">
+    <div id="app-dialog-message"></div>
+    <div id="app-dialog-actions">
+      <button id="app-dialog-cancel" type="button"></button>
+      <button id="app-dialog-confirm" type="button"></button>
+    </div>
   </div>
 </div>
 
@@ -848,6 +896,27 @@ Lyft
 
   let allJobs = [], activeFilter = 'placeholder', activePopup = null, activeCard = null;
   let activeMapJobs = [];
+  let joobleFailureCount = 0; // reset + counted each search batch; see showSourceWarningIfNeeded()
+  let hasCompletedSearch = false; // false until the first job fetch finishes — distinguishes "still loading" from "genuinely zero jobs at this location"
+
+  // Small non-blocking banner so a dropped job source (e.g. Jooble blocked by
+  // CORS) doesn't just look like "fewer jobs than expected" with no explanation.
+  let _sourceWarningTimer = null;
+  function showSourceWarning(message) {
+    const el = document.getElementById('source-warning-banner');
+    if (!el) return;
+    el.textContent = `⚠️ ${message}`;
+    el.classList.add('show');
+    clearTimeout(_sourceWarningTimer);
+    _sourceWarningTimer = setTimeout(() => el.classList.remove('show'), 7000);
+  }
+  function showSourceWarningIfNeeded(totalTags) {
+    if (joobleFailureCount === 0) return;
+    const msg = joobleFailureCount >= totalTags
+      ? 'One of our job sources (Jooble) didn’t respond — some listings may be missing.'
+      : 'Some listings from Jooble may be missing due to a connection issue.';
+    showSourceWarning(msg);
+  }
 
   // ── Map ─────────────────────────────────────────────────────────────────
   const map = new mapboxgl.Map({
@@ -907,6 +976,55 @@ Lyft
       if (e.target === sidebar && (e.propertyName === 'width' || e.propertyName === 'max-height')) finish();
     }, { once: true });
     setTimeout(finish, 650); // fallback in case transitionend doesn't fire
+  }
+
+  // ── Custom alert/confirm ─────────────────────────────────────────────────
+  // Swaps native alert()/confirm() (which look jarring against the app's
+  // custom UI) for a small in-app dialog. Both resolve a Promise so call
+  // sites can just `await` them; showAppAlert always resolves true,
+  // showAppConfirm resolves true/false depending on which button was pressed.
+  function _showAppDialog({ message, cancelText, confirmText }) {
+    return new Promise(resolve => {
+      const overlay    = document.getElementById('app-dialog-overlay');
+      const msgEl       = document.getElementById('app-dialog-message');
+      const cancelBtn   = document.getElementById('app-dialog-cancel');
+      const confirmBtn  = document.getElementById('app-dialog-confirm');
+
+      msgEl.textContent = message;
+      confirmBtn.textContent = confirmText;
+      if (cancelText) {
+        cancelBtn.textContent = cancelText;
+        cancelBtn.style.display = '';
+      } else {
+        cancelBtn.style.display = 'none';
+      }
+
+      function cleanup(result) {
+        overlay.classList.remove('show');
+        cancelBtn.removeEventListener('click', onCancel);
+        confirmBtn.removeEventListener('click', onConfirm);
+        document.removeEventListener('keydown', onKeydown);
+        resolve(result);
+      }
+      function onCancel()  { cleanup(false); }
+      function onConfirm() { cleanup(true); }
+      function onKeydown(e) {
+        if (e.key === 'Escape' && cancelText) onCancel();
+        if (e.key === 'Enter') onConfirm();
+      }
+
+      cancelBtn.addEventListener('click', onCancel);
+      confirmBtn.addEventListener('click', onConfirm);
+      document.addEventListener('keydown', onKeydown);
+      overlay.classList.add('show');
+      confirmBtn.focus();
+    });
+  }
+  function showAppAlert(message, confirmText = 'OK') {
+    return _showAppDialog({ message, cancelText: null, confirmText });
+  }
+  function showAppConfirm(message, confirmText = 'Confirm', cancelText = 'Cancel') {
+    return _showAppDialog({ message, cancelText, confirmText });
   }
 
   // ── Circle ───────────────────────────────────────────────────────────────
@@ -971,12 +1089,11 @@ Lyft
     if (strip) strip.style.borderColor = 'rgba(0,255,136,0.15)';
   }
 
-  // ── Link tracker ──────────────────────────────────────────────────────────
-  // Attempts a no-cors HEAD request to check basic reachability of the apply
-  // URL. no-cors returns an opaque response on success and throws on network
-  // failure — it cannot detect HTTP 404/410 but will catch dead domains.
-  let linkCheckAbort = null;
-
+  // ── Posting age display ──────────────────────────────────────────────────
+  // Formerly a live link-reachability checker; that was removed in favor of
+  // just showing how old each posting is (simpler, no false negatives from
+  // sites that block HEAD requests). Kept the traffic-strip-sub element and
+  // wiring since it's still a useful at-a-glance signal per job.
   function _ageLabel(created) {
     if (!created) return { text: 'Age unknown', color: 'rgba(255,255,255,0.28)' };
     const days = Math.floor((Date.now() - new Date(created).getTime()) / 864e5);
@@ -987,14 +1104,12 @@ Lyft
     return               { text: `${days}d ago`,            color: '#ff6b6b' };
   }
 
-  function resetLinkTracker() {
-    if (linkCheckAbort) { linkCheckAbort.abort(); linkCheckAbort = null; }
+  function resetPostingAge() {
     const sub = document.getElementById('traffic-strip-sub');
     if (sub) sub.textContent = '';
   }
 
-  function updateLinkTracker(job) {
-    // Link status removed — posting age is shown in the job cards directly
+  function updatePostingAge(job) {
     const age = _ageLabel(job.created);
     const sub = document.getElementById('traffic-strip-sub');
     if (sub) sub.textContent = age.text;
@@ -1005,7 +1120,7 @@ Lyft
   // likely-expired postings without a backend link-checker.
   function isStale(created) {
     if (!created) return false;
-    return (Date.now() - new Date(created).getTime()) > 30 * 24 * 60 * 60 * 1000;
+    return (Date.now() - new Date(created).getTime()) > NAV_CONFIG.STALE_JOB_DAYS * 24 * 60 * 60 * 1000;
   }
 
   // ── Location ─────────────────────────────────────────────────────────────
@@ -1031,11 +1146,14 @@ Lyft
   async function refetchJobsAroundCenter() {
     document.getElementById('job-count').textContent = '…';
     const tags = CATEGORIES.filter(c => c.tag !== 'all' && c.tag !== 'placeholder').map(c => c.tag);
+    joobleFailureCount = 0;
     const [adzunaRes, joobleRes] = await Promise.all([
-      Promise.all(tags.map(fetchCategory)),
-      Promise.all(tags.map(fetchJooble))
+      mapWithConcurrency(tags, 3, fetchCategory),
+      mapWithConcurrency(tags, 3, fetchJooble)
     ]);
+    showSourceWarningIfNeeded(tags.length);
     allJobs = dedupeJobs([...adzunaRes.flat(), ...joobleRes.flat()]);
+    hasCompletedSearch = true;
     if (activeFilter !== 'placeholder') { renderSidebar(); updateMapLayer(); }
   }
 
@@ -1044,6 +1162,9 @@ Lyft
   function requestLocation() {
     if (!navigator.geolocation) return;
     const btn = document.getElementById('locate-btn');
+    // Guard against rapid repeat taps stacking extra geolocation watches and
+    // job-search API bursts on top of one already in flight.
+    if (btn.classList.contains('locating')) return;
     document.getElementById('location-banner').classList.remove('show');
     btn.classList.add('locating');
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Locating…`;
@@ -1160,9 +1281,10 @@ Lyft
       zipStatus.className = 'error'; return;
     }
     if (userLocated) {
-      const confirmed = confirm(
+      const confirmed = await showAppConfirm(
         `You're currently using your shared location for the most accurate results.\n\n` +
-        `Search ZIP ${zip} instead? This will replace your shared location until you share it again.`
+        `Search ZIP ${zip} instead? This will replace your shared location until you share it again.`,
+        'Search ZIP', 'Keep my location'
       );
       if (!confirmed) return;
     }
@@ -1229,13 +1351,13 @@ Lyft
     document.getElementById('commute-job-company').textContent = job.company;
     document.getElementById('commute-panel').classList.add('visible');
 
-    // Reset commute times, gauge, and link tracker to loading state
+    // Reset commute times and gauge to loading state; show posting age
     ['driving','walking','cycling','dart'].forEach(m => {
       const el = document.getElementById(`time-${m}`);
       el.textContent = '…'; el.className = 'mode-time loading';
     });
     resetGauge();
-    updateLinkTracker(job); // start link check immediately (non-blocking)
+    updatePostingAge(job);
 
     const dest = [job.lng, job.lat];
 
@@ -1325,6 +1447,18 @@ Lyft
 
   let _lastModeTap = { mode: null, time: 0 };
 
+  // Commute-mode tiles are clickable divs (role="button" for screen readers)
+  // — this delegated listener makes them keyboard-operable too, and reuses
+  // selectMode's own double-tap timing so two quick Enter/Space presses
+  // start navigation the same way two quick taps/clicks do.
+  document.getElementById('commute-modes').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const tile = e.target.closest('.commute-mode');
+    if (!tile) return;
+    e.preventDefault();
+    selectMode(tile.id.replace('mode-', ''));
+  });
+
   function selectMode(mode) {
     const now = Date.now();
     if (_lastModeTap.mode === mode && (now - _lastModeTap.time) < 350) {
@@ -1345,7 +1479,6 @@ Lyft
   }
 
   // ── Navigation (GPS-driven turn-by-turn) ──────────────────────────────────
-  let ftAnimId   = null; // unused but kept to avoid reference errors
   let ftActive   = false;
   let ftCoords   = [];
   let ftCoordIdx = 0;
@@ -1359,6 +1492,16 @@ Lyft
     walking: { color: '#ffb347', label: 'Walk',   zoom: 17   },
     cycling: { color: '#68d391', label: 'Bike',   zoom: 16.5 },
     dart:    { color: '#b794f6', label: 'DART',   zoom: 16   },
+  };
+
+  // Named thresholds that used to be scattered as unlabeled magic numbers
+  // through the navigation/job-pin code — collected here so tuning any one
+  // of them doesn't require hunting through unrelated functions.
+  const NAV_CONFIG = {
+    ARRIVAL_RADIUS_MI:      0.02, // how close to the destination counts as "arrived" and auto-stops nav
+    STEP_ADVANCE_RADIUS_MI: 0.03, // how close to a turn's waypoint before advancing the turn-by-turn banner
+    STALE_JOB_DAYS:         30,   // postings older than this get the "stale" badge
+    MAX_VISIBLE_JOB_PINS:   5,    // job pins rendered on the map at once (nearest-first)
   };
 
   function _ftManeuverIcon(maneuver) {
@@ -1413,7 +1556,7 @@ Lyft
     if (!currentJob) return;
     const cfg = FT_MODE_CFG[mode];
     if (!cfg) return;
-    if (!userLocated) { alert('Share your location first to start navigation.'); return; }
+    if (!userLocated) { await showAppAlert('Share your location first to start navigation.'); return; }
 
     const dest = [currentJob.lng, currentJob.lat];
 
@@ -1541,7 +1684,7 @@ Lyft
       const wp = ftSteps[i].maneuver?.location;
       if (!wp) continue;
       const d = haversineMiles(coords[1], coords[0], wp[1], wp[0]);
-      if (d < 0.03) { newStepIdx = Math.min(i + 1, ftSteps.length - 1); break; }
+      if (d < NAV_CONFIG.STEP_ADVANCE_RADIUS_MI) { newStepIdx = Math.min(i + 1, ftSteps.length - 1); break; }
     }
     if (newStepIdx !== ftStepIdx) {
       ftStepIdx = newStepIdx;
@@ -1551,7 +1694,7 @@ Lyft
     // Arrived if within ~100ft of destination
     if (currentJob) {
       const distToDest = haversineMiles(coords[1], coords[0], currentJob.lat, currentJob.lng);
-      if (distToDest < 0.02) stopNavigation();
+      if (distToDest < NAV_CONFIG.ARRIVAL_RADIUS_MI) stopNavigation();
     }
   }
 
@@ -1582,7 +1725,7 @@ Lyft
     if (map.getSource('route'))          map.removeSource('route');
     if (activePopup) { activePopup.remove(); activePopup = null; }
     resetGauge();
-    resetLinkTracker();
+    resetPostingAge();
   }
 
   // ── Dropdown ─────────────────────────────────────────────────────────────
@@ -1708,8 +1851,14 @@ Lyft
   function renderSidebar() {
     const jobs = filteredJobs();
     const list = document.getElementById('job-list');
-    document.getElementById('loading-state').style.display = allJobs.length === 0 ? 'block' : 'none';
-    document.getElementById('empty-state').style.display   = allJobs.length > 0 && jobs.length === 0 ? 'block' : 'none';
+    // Three distinct states so "no results" never looks like a stuck loading
+    // spinner, and "no jobs at this location" reads differently from "no
+    // jobs in this particular category" (there's a real difference between
+    // the two — the first means try another area, the second means try
+    // another filter).
+    document.getElementById('loading-state').style.display  = !hasCompletedSearch ? 'block' : 'none';
+    document.getElementById('no-jobs-state').style.display  = hasCompletedSearch && allJobs.length === 0 ? 'block' : 'none';
+    document.getElementById('empty-state').style.display    = hasCompletedSearch && allJobs.length > 0 && jobs.length === 0 ? 'block' : 'none';
     document.getElementById('job-count').textContent = jobs.length;
     list.querySelectorAll('.job-card').forEach(el => el.remove());
 
@@ -1720,6 +1869,12 @@ Lyft
       const card = document.createElement('div');
       card.className = 'job-card'; card.dataset.index = i;
       card.style.borderLeftColor = cat.color;
+      // Job cards are clickable divs (not native <button>s, since they
+      // contain a nested link) — make them keyboard-reachable and
+      // screen-reader-nameable too.
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', `${job.title} at ${job.company}`);
 
       // Source badge (Jooble vs Adzuna)
       const sourceBadge = job.source === 'jooble'
@@ -1743,6 +1898,9 @@ Lyft
           <a class="card-apply" href="${job.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Apply →</a>
         </div>`;
       card.addEventListener('click', () => focusJob(job, card));
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focusJob(job, card); }
+      });
       list.appendChild(card);
     });
     loadCardDriveTimes(jobs);
@@ -1769,6 +1927,13 @@ Lyft
     }
   }
 
+  // Shared job-popup markup — was copy-pasted at 3 call sites (sidebar card
+  // click, 3D pin click, unclustered-point click); any future styling tweak
+  // now only needs to happen here.
+  function jobPopupHTML({ title, company, url }) {
+    return `<div class="popup-title">${title}</div><div class="popup-company">${company}</div><a class="popup-apply" href="${url}" target="_blank" rel="noopener">View & Apply →</a>`;
+  }
+
   function focusJob(job, card) {
     if (activeCard) activeCard.classList.remove('active');
     card.classList.add('active'); activeCard = card;
@@ -1776,7 +1941,7 @@ Lyft
     map.flyTo({ center:[job.lng,job.lat], zoom:Math.max(map.getZoom(),15), pitch:50, duration:800 });
     activePopup = new mapboxgl.Popup({ closeButton:true, maxWidth:'260px' })
       .setLngLat([job.lng, job.lat])
-      .setHTML(`<div class="popup-title">${job.title}</div><div class="popup-company">${job.company}</div><a class="popup-apply" href="${job.url}" target="_blank" rel="noopener">View & Apply →</a>`)
+      .setHTML(jobPopupHTML(job))
       .addTo(map);
     trackEvent('job_clicked', { source:'sidebar_card', category:job.category, company:job.company });
     loadCommute(job);
@@ -1809,6 +1974,27 @@ Lyft
     return emojiMap[tag] || '💼';
   }
 
+  // ── Concurrency limiter ──────────────────────────────────────────────────
+  // A location search fans out to ~7 job categories, each hitting Adzuna
+  // (4 pages) + Jooble (1 request) — fired all at once that's ~35 simultaneous
+  // requests, which risks tripping Adzuna's rate limit. Run the per-category
+  // work through this limiter instead so only a few categories are in flight
+  // at a time; each category's own internal Adzuna page fetches still run in
+  // parallel, so total concurrent requests stays bounded and predictable.
+  async function mapWithConcurrency(items, limit, worker) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    async function runNext() {
+      while (nextIndex < items.length) {
+        const i = nextIndex++;
+        results[i] = await worker(items[i], i);
+      }
+    }
+    const runners = Array.from({ length: Math.min(limit, items.length) }, runNext);
+    await Promise.all(runners);
+    return results;
+  }
+
   // ── Dedup ─────────────────────────────────────────────────────────────────
   function dedupeJobs(jobs) {
     const seenIds  = new Set();
@@ -1837,7 +2023,7 @@ Lyft
       return;
     }
     const activeKeys    = new Set();
-    const MAX_VISIBLE   = 5;
+    const MAX_VISIBLE   = NAV_CONFIG.MAX_VISIBLE_JOB_PINS;
     const nearestJobs   = [...activeMapJobs]
       .sort((a, b) =>
         haversineMiles(CENTER[1], CENTER[0], a.lat, a.lng) -
@@ -1886,7 +2072,7 @@ Lyft
       if (activePopup) activePopup.remove();
       activePopup = new mapboxgl.Popup({ closeButton:true, maxWidth:'260px' })
         .setLngLat([lng, lat])
-        .setHTML(`<div class="popup-title">${props.title}</div><div class="popup-company">${props.company}</div><a class="popup-apply" href="${props.url}" target="_blank" rel="noopener">View & Apply →</a>`)
+        .setHTML(jobPopupHTML(props))
         .addTo(map);
       map.flyTo({ center:[lng,lat], zoom:Math.max(map.getZoom(),15), pitch:50, duration:700 });
       trackEvent('job_clicked', { source:'map_pin', category:props.category, company:props.company });
@@ -1975,7 +2161,7 @@ Lyft
           resultsOnPage: '20'
         })
       });
-      if (!res.ok) return [];
+      if (!res.ok) { joobleFailureCount++; return []; }
       const data = await res.json();
       if (!data.jobs?.length) return [];
 
@@ -2016,6 +2202,7 @@ Lyft
         });
     } catch(e) {
       console.warn('Jooble fetch failed (possible CORS block):', e);
+      joobleFailureCount++;
       return [];
     }
   }
@@ -2127,7 +2314,7 @@ Lyft
       if (activePopup) activePopup.remove();
       activePopup = new mapboxgl.Popup({ closeButton:true, maxWidth:'260px' })
         .setLngLat(coords)
-        .setHTML(`<div class="popup-title">${title}</div><div class="popup-company">${company}</div><a class="popup-apply" href="${url}" target="_blank" rel="noopener">View & Apply →</a>`)
+        .setHTML(jobPopupHTML({ title, company, url }))
         .addTo(map);
       map.flyTo({ center:coords, zoom:Math.max(map.getZoom(),15), pitch:50, duration:700 });
       const jobs = filteredJobs();
@@ -2161,11 +2348,14 @@ Lyft
 
     // ── Initial data load: Adzuna (4 pages) + Jooble in parallel ──────────
     const tags = CATEGORIES.filter(c => c.tag !== 'all' && c.tag !== 'placeholder').map(c => c.tag);
+    joobleFailureCount = 0;
     const [adzunaRes, joobleRes] = await Promise.all([
-      Promise.all(tags.map(fetchCategory)),
-      Promise.all(tags.map(fetchJooble))
+      mapWithConcurrency(tags, 3, fetchCategory),
+      mapWithConcurrency(tags, 3, fetchJooble)
     ]);
+    showSourceWarningIfNeeded(tags.length);
     allJobs.push(...dedupeJobs([...adzunaRes.flat(), ...joobleRes.flat()]));
+    hasCompletedSearch = true;
     if (activeFilter !== 'placeholder') { renderSidebar(); updateMapLayer(); }
   });
 </script>
